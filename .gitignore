@@ -1,0 +1,7 @@
+# Ignoriere temporäre/vertrauliche Dateien
+node_modules/
+uploads/
+*.log
+.env
+.DS_Store
+Thumbs.db
