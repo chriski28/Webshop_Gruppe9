@@ -81,4 +81,29 @@ class DataHandler
 
         return $users;
     }
+
+    public static function getUserByUsername(string $username): ?User
+{
+    $pdo = DBAccess::connect();
+    $stmt = $pdo->prepare("SELECT * FROM users WHERE username = :username");
+    $stmt->execute(['username' => $username]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$row) return null;
+
+    return new User(
+        (int) $row['user_id'],
+        (bool) $row['is_admin'],
+        $row['first_name'],
+        $row['last_name'],
+        $row['address'],
+        $row['postal_code'],
+        $row['city'],
+        $row['email'],
+        $row['username'],
+        $row['password'], 
+        (bool) $row['active']
+    );
+}
+
 }

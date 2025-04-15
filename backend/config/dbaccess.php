@@ -7,8 +7,8 @@ class DBAccess
     {
         if (self::$pdo === null) {
             $dsn = 'mysql:host=localhost;dbname=bookify_db;charset=utf8';
-            $user = 'bookify_user';
-            $password = '1234';
+            $user = 'root';         // Standard-XAMPP-Benutzer
+            $password = '';         // Standard: kein Passwort
             self::$pdo = new PDO($dsn, $user, $password);
         }
         return self::$pdo;

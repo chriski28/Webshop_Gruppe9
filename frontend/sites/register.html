@@ -23,70 +23,64 @@
                 <form id="registerForm">
                   <div class="row">
                     <div class="col-md-6 mb-3">
-                      <label for="vorname" class="form-label">Vorname</label>
-                      <input
-                        type="text"
-                        class="form-control"
-                        id="vorname"
-                        required
-                      />
+                      <label for="anrede" class="form-label">Anrede</label>
+                      <select class="form-select" id="anrede" required>
+                        <option value="">Bitte wählen</option>
+                        <option value="Frau">Frau</option>
+                        <option value="Herr">Herr</option>
+                        <option value="Divers">Divers</option>
+                      </select>
                     </div>
+                
+                    <div class="col-md-6 mb-3">
+                      <label for="vorname" class="form-label">Vorname</label>
+                      <input type="text" class="form-control" id="vorname" required />
+                    </div>
+                
                     <div class="col-md-6 mb-3">
                       <label for="nachname" class="form-label">Nachname</label>
-                      <input
-                        type="text"
-                        class="form-control"
-                        id="nachname"
-                        required
-                      />
+                      <input type="text" class="form-control" id="nachname" required />
                     </div>
+                
+                    <div class="col-md-6 mb-3">
+                      <label for="adresse" class="form-label">Adresse</label>
+                      <input type="text" class="form-control" id="adresse" required />
+                    </div>
+                
+                    <div class="col-md-6 mb-3">
+                      <label for="plz" class="form-label">PLZ</label>
+                      <input type="text" class="form-control" id="plz" required />
+                    </div>
+                
+                    <div class="col-md-6 mb-3">
+                      <label for="ort" class="form-label">Ort</label>
+                      <input type="text" class="form-control" id="ort" required />
+                    </div>
+                
                     <div class="col-md-6 mb-3">
                       <label for="email" class="form-label">E-Mail</label>
-                      <input
-                        type="email"
-                        class="form-control"
-                        id="email"
-                        required
-                      />
+                      <input type="email" class="form-control" id="email" required />
                     </div>
+                
                     <div class="col-md-6 mb-3">
-                      <label for="benutzername" class="form-label"
-                        >Benutzername</label
-                      >
-                      <input
-                        type="text"
-                        class="form-control"
-                        id="benutzername"
-                        required
-                      />
+                      <label for="benutzername" class="form-label">Benutzername</label>
+                      <input type="text" class="form-control" id="benutzername" required />
                     </div>
+                
                     <div class="col-md-6 mb-3">
                       <label for="passwort" class="form-label">Passwort</label>
-                      <input
-                        type="password"
-                        class="form-control"
-                        id="passwort"
-                        required
-                      />
+                      <input type="password" class="form-control" id="passwort" required />
                     </div>
+                
                     <div class="col-md-6 mb-3">
-                      <label for="passwort2" class="form-label"
-                        >Passwort wiederholen</label
-                      >
-                      <input
-                        type="password"
-                        class="form-control"
-                        id="passwort2"
-                        required
-                      />
+                      <label for="passwort2" class="form-label">Passwort wiederholen</label>
+                      <input type="password" class="form-control" id="passwort2" required />
                     </div>
                   </div>
-
+                
                   <div id="registerMessage" class="text-danger mb-3"></div>
-                  <button type="submit" class="btn btn-success w-100">
-                    Registrieren
-                  </button>
-                </form>
+                  <button type="submit" class="btn btn-success w-100">Registrieren</button>
+                </form>                
               </div>
             </div>
           </div>
