@@ -34,7 +34,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const wrapper = document.createElement("div");
       wrapper.innerHTML = data;
       document.body.insertBefore(wrapper, document.body.firstChild);
-      renderMenu(); // NEU: erst Menü laden, wenn Header eingefügt wurde
+     // renderMenu(); // NEU: erst Menü laden, wenn Header eingefügt wurde
     });
 
   // === Footer laden ===
@@ -91,97 +91,154 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   
 
-// === LOGIN ===
-const loginForm = document.getElementById("loginForm");
-if (loginForm) {
-  loginForm.addEventListener("submit", function (e) {
-    e.preventDefault();
-
-    const data = {
-      action: "login",
-      username: $("#username").val(),
-      password: $("#password").val(),
-      rememberMe: $("#rememberMe").is(":checked") // Checkbox
-    };
-
-    $.ajax({
-      url: "../../backend/logic/requestHandler.php",
-      type: "POST",
-      contentType: "application/json",
-      data: JSON.stringify(data),
-      success: function (response) {
-        if (response.success) {
-          if (data.rememberMe) {
-            const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toUTCString();
-            document.cookie = `remember_token=${response.remember_token}; expires=${expires}; path=/;`;
-          }
-          window.location.href = "index.html";
-        } else {
-          $("#loginMessage").text(response.error || "Login fehlgeschlagen.");
-        }
-      },
-      error: function () {
-        $("#loginMessage").text("Fehler beim Login.");
-      }
-    });
-  });
-}
-
-
-
-// === DYNAMISCHE NAVIGATION ===
-fetch("../../backend/logic/requestHandler.php", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ action: "getSessionUser" })
-})
-.then((res) => res.json())
-.then((data) => {
-  const nav = document.getElementById("user-nav");
-  if (!nav) return;
-
-  if (!data.username) {
-    // Gast
-    nav.innerHTML = `
-      <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
-      <li class="nav-item"><a class="nav-link" href="login.html">Login</a></li>
-      <li class="nav-item"><a class="nav-link" href="register.html">Registrieren</a></li>
-    `;
-  } else if (data.is_admin) {
-    // Admin
-    nav.innerHTML = `
-      <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
-      <li class="nav-item"><a class="nav-link" href="editProducts.html">Produkte bearbeiten</a></li>
-      <li class="nav-item"><a class="nav-link" href="editCustomer.html">Kunden bearbeiten</a></li>
-      <li class="nav-item"><span class="nav-link disabled">👑 ${data.username}</span></li>
-      <li class="nav-item"><a class="nav-link" href="#" id="logout-link">Logout</a></li>
-    `;
-  } else {
-    // Normaler User
-    nav.innerHTML = `
-      <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
-      <li class="nav-item"><a class="nav-link" href="products.html">Produkte</a></li>
-      <li class="nav-item"><a class="nav-link" href="myAcc.html">Mein Konto</a></li>
-      <li class="nav-item"><a class="nav-link" href="cart.html">Warenkorb</a></li>
-      <li class="nav-item"><span class="nav-link disabled">👋 ${data.username}</span></li>
-      <li class="nav-item"><a class="nav-link" href="#" id="logout-link">Logout</a></li>
-    `;
-  }
-
-  // === LOGOUT FUNKTION ===
-  const logoutBtn = document.getElementById("logout-link");
-  if (logoutBtn) {
-    logoutBtn.addEventListener("click", (e) => {
+  // === LOGIN ===
+  const loginForm = document.getElementById("loginForm");
+  if (loginForm) {
+    loginForm.addEventListener("submit", function (e) {
       e.preventDefault();
-      fetch("../../backend/logic/requestHandler.php", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "logout" })
-      }).then(() => {
-        document.cookie = "remember_token=; Max-Age=0; path=/;";
-        window.location.href = "index.html";
+
+      const data = {
+        action: "login",
+        username: $("#username").val(),
+        password: $("#password").val(),
+        rememberMe: $("#rememberMe").is(":checked") // Checkbox
+      };
+
+      $.ajax({
+        url: "../../backend/logic/requestHandler.php",
+        type: "POST",
+        contentType: "application/json",
+        data: JSON.stringify(data),
+        success: function (response) {
+          if (response.success) {
+            if (data.rememberMe) {
+              const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toUTCString();
+              document.cookie = `remember_token=${response.remember_token}; expires=${expires}; path=/;`;
+            }
+            window.location.href = "index.html";
+          } else {
+            $("#loginMessage").text(response.error || "Login fehlgeschlagen.");
+          }
+        },
+        error: function () {
+          $("#loginMessage").text("Fehler beim Login.");
+        }
       });
     });
   }
+
+
+
+  // === DYNAMISCHE NAVIGATION ===
+  fetch("../../backend/logic/requestHandler.php", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "getSessionUser" })
+  })
+  .then((res) => res.json())
+  .then((data) => {
+    const nav = document.getElementById("user-nav");
+    if (!nav) return;
+
+    if (!data.username) {
+      // Gast
+      nav.innerHTML = `
+        <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
+        <li class="nav-item"><a class="nav-link" href="login.html">Login</a></li>
+        <li class="nav-item"><a class="nav-link" href="register.html">Registrieren</a></li>
+      `;
+    } else if (data.is_admin) {
+      // Admin
+      nav.innerHTML = `
+        <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
+        <li class="nav-item"><a class="nav-link" href="editProducts.html">Produkte bearbeiten</a></li>
+        <li class="nav-item"><a class="nav-link" href="editCustomer.html">Kunden bearbeiten</a></li>
+        <li class="nav-item"><span class="nav-link disabled">👑 ${data.username}</span></li>
+        <li class="nav-item"><a class="nav-link" href="#" id="logout-link">Logout</a></li>
+      `;
+    } else {
+      // Normaler User
+      nav.innerHTML = `
+        <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
+        <li class="nav-item"><a class="nav-link" href="products.html">Produkte</a></li>
+        <li class="nav-item"><a class="nav-link" href="myAcc.html">Mein Konto</a></li>
+        <li class="nav-item"><a class="nav-link" href="cart.html">Warenkorb</a></li>
+        <li class="nav-item"><span class="nav-link disabled">👋 ${data.username}</span></li>
+        <li class="nav-item"><a class="nav-link" href="#" id="logout-link">Logout</a></li>
+      `;
+    }
+
+    // === LOGOUT FUNKTION ===
+    const logoutBtn = document.getElementById("logout-link");
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        fetch("../../backend/logic/requestHandler.php", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "logout" })
+        }).then(() => {
+          document.cookie = "remember_token=; Max-Age=0; path=/;";
+          window.location.href = "index.html";
+        });
+      });
+    }
+
+
+    //ebook laden
+    const ebookContainer = document.getElementById("ebook-container");
+    const categorySelect = document.getElementById("categorySelect");
+    const ebookTemplate = document.getElementById("ebook-card-template");
+    
+    if (ebookContainer && categorySelect && ebookTemplate) {
+    
+      loadEbooks(categorySelect.value);
+    
+      categorySelect.addEventListener("change", () => {
+        loadEbooks(categorySelect.value); // Bei Auswahlwechsel werden neue E-Books geladen
+      });
+    }
+    
+    function loadEbooks(category = null) {
+      const requestData = {
+        action: "getEbooks"
+      };
+    
+      if (category) {
+        requestData.category = category;
+      }
+    
+      fetch("../../backend/logic/requestHandler.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestData)
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          ebookContainer.innerHTML = ""; // E-Books leeren
+    
+          data.forEach((ebookData) => {
+            const card = ebookTemplate.cloneNode(true);
+            card.classList.remove("d-none");
+            card.removeAttribute("id");
+    
+            const img = card.querySelector("img");
+            img.src = "../../" + ebookData.image;
+            img.alt = ebookData.title;
+    
+            card.querySelector(".card-title").textContent = ebookData.title;
+            card.querySelector(".ebook-price").textContent = ebookData.price.toFixed(2);
+    
+            ebookContainer.appendChild(card);
+          });
+        })
+        .catch((err) => {
+          console.error("Fehler beim Laden der E-Books:", err);
+        });
+    }
+
+    
+    
+
 });
 
