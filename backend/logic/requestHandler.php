@@ -142,7 +142,6 @@ switch ($input['action']) {
                             echo json_encode(['success' => false, 'error' => 'Ungültiger Token.']);
                         }
                         break;
-                    
 
                         case 'logout':
                             session_unset();
@@ -160,6 +159,15 @@ switch ($input['action']) {
                         
                             echo json_encode(['success' => true]);
                             break;
+                        //shop
+                        case 'getEbooks':
+                            // Kategorie prüfen (wenn vorhanden)
+                            $category = $input['category'] ?? null;
+                        
+                            $ebooks = DataHandler::getEbooks($category);
+                            echo json_encode($ebooks);
+                            break;
+        
                         
                     
     

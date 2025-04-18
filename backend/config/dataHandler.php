@@ -9,7 +9,7 @@ class DataHandler
         $pdo = DBAccess::connect();
         $stmt = $pdo->prepare("SELECT * FROM users WHERE user_id = :id");
         $stmt->execute(['id' => $id]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC); //man bekommt die Daten als assoziatives Array
 
         if (!$row) {
             return null;
@@ -42,7 +42,7 @@ class DataHandler
     ");
 
         return $stmt->execute([
-            'is_admin' => (int) $user->isAdmin(),
+            'is_admin' => (int) $user->isAdmin(), //setzt den Platzhalter :is_admin im SQL-Statement mit dem tatsächlichen Wert von $is_admin
             'first_name' => $user->getFirstName(),
             'last_name' => $user->getLastName(),
             'address' => $user->getAddress(),
@@ -105,5 +105,32 @@ class DataHandler
         (bool) $row['active']
     );
 }
+
+public static function getEbooks(?string $category = null): array
+{
+    $pdo = DBAccess::connect();
+
+    if ($category) {
+        $stmt = $pdo->prepare("SELECT ebook_id, title, price, cover_image_path FROM ebooks WHERE category = :category");
+        $stmt->execute(['category' => $category]);
+    } else {
+        $stmt = $pdo->query("SELECT ebook_id, title, price, cover_image_path FROM ebooks");
+    }
+
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $ebooks = [];
+
+    foreach ($rows as $row) {
+        $ebooks[] = [
+            'id' => (int)$row['ebook_id'],
+            'title' => $row['title'],
+            'price' => (float)$row['price'],
+            'image' => $row['cover_image_path']
+        ];
+    }
+
+    return $ebooks;
+}
+
 
 }
