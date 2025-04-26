@@ -167,7 +167,17 @@ switch ($input['action']) {
                             $ebooks = DataHandler::getEbooks($category);
                             echo json_encode($ebooks);
                             break;
-        
+                        //search
+                        case 'searchEbooks':
+                            if (isset($input['search'])) {
+                                $searchTerm = $input['search'];
+                                $ebooks = DataHandler::searchEbooks($searchTerm);
+                                echo json_encode($ebooks);
+                            } else {
+                                echo json_encode(['error' => 'No search term provided']);
+                            }
+                            break;
+
                         
                     
     
