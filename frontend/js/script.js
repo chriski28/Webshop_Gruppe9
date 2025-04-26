@@ -184,61 +184,89 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
+ // ebooks ladden+ Suchen Live
+ const ebookContainer = document.getElementById("ebook-container");
+ const categorySelect = document.getElementById("categorySelect");
+ const ebookTemplate = document.getElementById("ebook-card-template");
+ const searchInput = document.getElementById("searchInput");
 
-    //ebook laden
-    const ebookContainer = document.getElementById("ebook-container");
-    const categorySelect = document.getElementById("categorySelect");
-    const ebookTemplate = document.getElementById("ebook-card-template");
-    
-    if (ebookContainer && categorySelect && ebookTemplate) {
-    
-      loadEbooks(categorySelect.value);
-    
-      categorySelect.addEventListener("change", () => {
-        loadEbooks(categorySelect.value); // Bei Auswahlwechsel werden neue E-Books geladen
+ if (ebookContainer && categorySelect && ebookTemplate) {
+   loadEbooks(categorySelect.value);
+
+   categorySelect.addEventListener("change", () => {
+     loadEbooks(categorySelect.value);
+   });
+
+   if (searchInput) {
+     searchInput.addEventListener("input", () => {
+       const query = searchInput.value.trim();
+       if (query.length > 0) {
+         searchEbooks(query);
+       } else {
+         loadEbooks(categorySelect.value); // Wenn leer, wieder alle ebooks laden
+       }
+     });
+   }
+ }
+
+ function loadEbooks(category = null) {
+   const requestData = { action: "getEbooks" };
+   if (category) {
+     requestData.category = category;
+   }
+
+   fetch("../../backend/logic/requestHandler.php", {
+     method: "POST",
+     headers: { "Content-Type": "application/json" },
+     body: JSON.stringify(requestData)
+   })
+     .then(res => res.json())
+     .then(data => {
+       renderEbooks(data);
+     })
+     .catch(err => {
+       console.error("Fehler beim Laden der E-Books:", err);
+     });
+ }
+
+ function searchEbooks(query) {
+   const requestData = {
+     action: "searchEbooks",
+     search: query
+   };
+
+   fetch("../../backend/logic/requestHandler.php", {
+     method: "POST",
+     headers: { "Content-Type": "application/json" },
+     body: JSON.stringify(requestData)
+   })
+     .then(res => res.json())
+     .then(data => {
+       renderEbooks(data);
+     })
+     .catch(err => {
+       console.error("Fehler bei der Suche:", err);
+       ebookContainer.innerHTML = '<p style="color: red;">Keine E-Books gefunden</p>';
       });
-    }
-    
-    function loadEbooks(category = null) {
-      const requestData = {
-        action: "getEbooks"
-      };
-    
-      if (category) {
-        requestData.category = category;
-      }
-    
-      fetch("../../backend/logic/requestHandler.php", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestData)
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          ebookContainer.innerHTML = ""; // E-Books leeren
-    
-          data.forEach((ebookData) => {
-            const card = ebookTemplate.cloneNode(true);
-            card.classList.remove("d-none");
-            card.removeAttribute("id");
-    
-            const img = card.querySelector("img");
-            img.src = "../../" + ebookData.image;
-            img.alt = ebookData.title;
-    
-            card.querySelector(".card-title").textContent = ebookData.title;
-            card.querySelector(".ebook-price").textContent = ebookData.price.toFixed(2);
-    
-            ebookContainer.appendChild(card);
-          });
-        })
-        .catch((err) => {
-          console.error("Fehler beim Laden der E-Books:", err);
-        });
-    }
+ }
 
-    
-    
+ function renderEbooks(ebooks) {
+   ebookContainer.innerHTML = "";
+
+   ebooks.forEach(ebookData => {
+     const card = ebookTemplate.cloneNode(true);
+     card.classList.remove("d-none");
+     card.removeAttribute("id");
+
+     const img = card.querySelector("img");
+     img.src = "../../" + ebookData.image;
+     img.alt = ebookData.title;
+
+     card.querySelector(".card-title").textContent = ebookData.title;
+     card.querySelector(".ebook-price").textContent = ebookData.price.toFixed(2);
+
+     ebookContainer.appendChild(card);
+   });
+ }
 
 });
-

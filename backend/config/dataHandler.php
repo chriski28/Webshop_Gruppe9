@@ -132,5 +132,31 @@ public static function getEbooks(?string $category = null): array
     return $ebooks;
 }
 
+public static function searchEbooks(string $searchTerm): array|string
+{
+    $pdo = DBAccess::connect();
+    $stmt = $pdo->prepare("SELECT ebook_id, title, price, cover_image_path FROM ebooks WHERE title LIKE :search");
+    $stmt->execute(['search' => '%' . $searchTerm . '%']);
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if (!$rows) {
+        return ['error' => 'Keine E-Books gefunden.'];
+    }
+
+    $ebooks = [];
+    foreach ($rows as $row) {
+        $ebooks[] = [
+            'id' => (int)$row['ebook_id'],
+            'title' => $row['title'],
+            'price' => (float)$row['price'],
+            'image' => $row['cover_image_path']
+        ];
+    }
+
+    return $ebooks;
+}
+
+
+
 
 }
