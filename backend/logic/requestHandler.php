@@ -29,10 +29,11 @@ switch ($input['action']) {
         break;
 
     case 'createUser':
-        if (isset($input['first_name'], $input['last_name'], $input['address'], $input['postal_code'], $input['city'], $input['email'], $input['username'], $input['password'])) {
+        if (isset($input['salutation'],$input['first_name'], $input['last_name'], $input['address'], $input['postal_code'], $input['city'], $input['email'], $input['username'], $input['password'])) {
             $user = new User(
                 0, // user_id (auto-increment, set to 0)
                 false, // is_admin default false
+                $input['salutation'],
                 $input['first_name'],
                 $input['last_name'],
                 $input['address'],

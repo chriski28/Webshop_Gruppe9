@@ -18,6 +18,7 @@ class DataHandler
         $user = new User(
             (int) $row['user_id'],
             (bool) $row['is_admin'],
+            $row['salutation'],
             $row['first_name'],
             $row['last_name'],
             $row['address'],
@@ -36,13 +37,14 @@ class DataHandler
         $pdo = DBAccess::connect();
         $stmt = $pdo->prepare("
         INSERT INTO users 
-        (is_admin, first_name, last_name, address, postal_code, city, email, username, password, active)
+        (is_admin, salutation, first_name, last_name, address, postal_code, city, email, username, password, active)
         VALUES 
-        (:is_admin, :first_name, :last_name, :address, :postal_code, :city, :email, :username, :password, :active)
+        (:is_admin, :salutation, :first_name, :last_name, :address, :postal_code, :city, :email, :username, :password, :active)
     ");
 
         return $stmt->execute([
             'is_admin' => (int) $user->isAdmin(), //setzt den Platzhalter :is_admin im SQL-Statement mit dem tatsächlichen Wert von $is_admin
+           'salutation' => $user->getSalutation(),
             'first_name' => $user->getFirstName(),
             'last_name' => $user->getLastName(),
             'address' => $user->getAddress(),
@@ -66,6 +68,7 @@ class DataHandler
             $user = new User(
                 (int) $row['user_id'],
                 (bool) $row['is_admin'],
+                $row['salutation'],
                 $row['first_name'],
                 $row['last_name'],
                 $row['address'],
@@ -94,6 +97,7 @@ class DataHandler
     return new User(
         (int) $row['user_id'],
         (bool) $row['is_admin'],
+        $row['salutation'], 
         $row['first_name'],
         $row['last_name'],
         $row['address'],

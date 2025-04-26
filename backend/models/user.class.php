@@ -4,6 +4,7 @@ class User
 {
     private $user_id; // int
     private $is_admin; // bool
+    private $salutation; //string
     private $first_name; // string
     private $last_name; // string
     private $address; // string
@@ -15,10 +16,11 @@ class User
     private $active; // bool
 
     // Constructor
-    public function __construct(int $user_id, bool $is_admin, string $first_name, string $last_name, string $address, string $postal_code, string $city, string $email, string $username, string $password, bool $active)
+    public function __construct(int $user_id, bool $is_admin,string $salutation, string $first_name, string $last_name, string $address, string $postal_code, string $city, string $email, string $username, string $password, bool $active)
     {
         $this->user_id = $user_id;
         $this->is_admin = $is_admin;
+        $this->salutation = $salutation;
         $this->first_name = $first_name;
         $this->last_name = $last_name;
         $this->address = $address;
@@ -51,6 +53,17 @@ class User
     {
         $this->is_admin = $is_admin;
     }
+
+     // Getter and Setter for salutation (NEU)
+     public function getSalutation(): string
+     {
+         return $this->salutation;
+     }
+ 
+     public function setSalutation(string $salutation): void
+     {
+         $this->salutation = $salutation;
+     }
 
     // Getter and Setter for first_name
     public function getFirstName(): string
@@ -151,12 +164,15 @@ class User
         $this->active = $active;
     }
 
+    
+
     // Convert Object to Array
     public function toArray(): array
     {
         return [
             'user_id' => $this->user_id,
             'is_admin' => $this->is_admin,
+            'salutation' => $this->salutation,
             'first_name' => $this->first_name,
             'last_name' => $this->last_name,
             'address' => $this->address,
