@@ -233,5 +233,71 @@ class DataHandler
         $pdo->prepare("DELETE FROM items WHERE cart_id = ? AND ebook_id = ?")
             ->execute([$cartId, $ebookId]);
     }
+
+    
+    public static function updateUser(User $user, string $currentPassword): bool{
+        $pdo = DBAccess::connect();
+    
+        // Aktuelles Passwort prüfen
+        $stmt = $pdo->prepare("SELECT password FROM users WHERE user_id = ?");
+        $stmt->execute([$user->getUserId()]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+        if (!$row || !password_verify($currentPassword, $row['password'])) {
+            return false; // Passwort falsch
+        }
+    
+        // Stammdaten aktualisieren (username und password bleiben gleich)
+        $stmt = $pdo->prepare("
+            UPDATE users 
+               SET salutation = :salutation,
+                   first_name = :first_name,
+                   last_name = :last_name,
+                   address = :address,
+                   postal_code = :postal_code,
+                   city = :city,
+                   email = :email
+             WHERE user_id = :user_id
+        ");
+    
+        return $stmt->execute([
+            'salutation' => $user->getSalutation(),
+            'first_name' => $user->getFirstName(),
+            'last_name' => $user->getLastName(),
+            'address' => $user->getAddress(),
+            'postal_code' => $user->getPostalCode(),
+            'city' => $user->getCity(),
+            'email' => $user->getEmail(),
+            'user_id' => $user->getUserId()
+        ]);
+    }
+    public static function getOrdersByUser(int $userId): array
+    {
+        $pdo = DBAccess::connect();
+        $stmt = $pdo->prepare("
+            SELECT order_id, created_at AS order_date, status
+            FROM orders
+            WHERE user_id = :user_id
+            ORDER BY created_at DESC
+        ");
+        $stmt->execute(['user_id' => $userId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    
+    
+        public static function getOrderDetails(int $orderId): array{
+        $pdo = DBAccess::connect();
+        $stmt = $pdo->prepare("
+            SELECT e.title, e.price, i.quantity, (e.price * i.quantity) AS line_total
+              FROM order_items i
+              JOIN ebooks e ON i.ebook_id = e.ebook_id
+             WHERE i.order_id = ?
+        ");
+        $stmt->execute([$orderId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    
     
 }
+
+

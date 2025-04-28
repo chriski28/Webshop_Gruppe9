@@ -15,18 +15,18 @@ if (!isset($input['action'])) {
 switch ($input['action']) {
 
     case 'getUser':
-        if (isset($input['id'])) {
-            $user = DataHandler::getUser($input['id']);
-
+        if (isset($_SESSION['user_id'])) {
+            $user = DataHandler::getUser($_SESSION['user_id']);
             if ($user === null) {
                 echo json_encode(['error' => 'User not found']);
             } else {
                 echo json_encode($user->toArray());
             }
         } else {
-            echo json_encode(['error' => 'Missing user ID']);
+            echo json_encode(['error' => 'Not logged in']);
         }
         break;
+    
 
     case 'createUser':
         if (isset(
@@ -214,6 +214,59 @@ switch ($input['action']) {
         echo json_encode(['success' => true]);
         break;
 
+    case 'updateUser':
+        if (isset($input['salutation'], $input['first_name'], $input['last_name'], $input['address'], $input['postal_code'], $input['city'], $input['email'], $input['currentPassword'])) {
+            if (!isset($_SESSION['user_id'])) {
+                echo json_encode(['error' => 'Not logged in']);
+                break;
+            }
+        
+            $user = new User(
+                $_SESSION['user_id'],
+                false, // is_admin bleibt wie es ist
+                $input['salutation'],
+                $input['first_name'],
+                $input['last_name'],
+                $input['address'],
+                $input['postal_code'],
+                $input['city'],
+                $input['email'],
+                '', // username und password ändern wir hier NICHT
+                '', 
+                true // active bleibt true
+            );
+        
+            $success = DataHandler::updateUser($user, $input['currentPassword']);
+            if ($success) {
+                echo json_encode(['success' => true]);
+            } else {
+                echo json_encode(['error' => 'Falsches Passwort oder Fehler beim Aktualisieren.']);
+            }
+        } else {
+            echo json_encode(['error' => 'Fehlende Felder']);
+        }
+        break;
+    
+    case 'getUserOrders':
+        if (!isset($_SESSION['user_id'])) {
+            echo json_encode(['error' => 'Not logged in']);
+            break;
+        }
+        
+        $orders = DataHandler::getOrdersByUser($_SESSION['user_id']);
+        echo json_encode($orders);
+        break;
+
+    case 'getOrderDetails':
+        if (!isset($input['order_id'])) {
+            echo json_encode(['error' => 'Fehlende Bestell-ID']);
+            break;
+        }
+        
+        $details = DataHandler::getOrderDetails($input['order_id']);
+        echo json_encode($details);
+        break; 
+        
     default:
         echo json_encode(['error' => 'Unknown action']);
         break;
