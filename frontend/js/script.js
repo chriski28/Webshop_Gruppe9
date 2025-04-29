@@ -5,27 +5,39 @@ function getCookie(name) {
   if (parts.length === 2) return parts.pop().split(";").shift();
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  // === Login mit Cookie, falls vorhanden ===
+document.addEventListener("DOMContentLoaded", async () => {
   const token = getCookie("remember_token");
-  if (token) {
-    fetch("../../backend/logic/requestHandler.php", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "loginWithToken", token }),
-    })
-      .then((res) => res.json())
-      .then((response) => {
-        if (response.success) {
-          window.location.href = "index.html";
-        } else {
-          console.error("Auto-Login mit Cookie fehlgeschlagen");
-        }
-      })
-      .catch((err) => {
-        console.error("Auto-Login mit Cookie fehlgeschlagen", err);
+
+  const sessionCheck = await fetch("../../backend/logic/requestHandler.php", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "getSessionUser" }),
+  });
+  const sessionUser = await sessionCheck.json();
+
+  if (!sessionUser.username && token) {
+    try {
+      const res = await fetch("../../backend/logic/requestHandler.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "loginWithToken", token }),
       });
+      const response = await res.json();
+
+      if (response.success) {
+        console.log("Auto-Login erfolgreich");
+        window.location.href = "index.html"; // Direkt umleiten!
+        return;
+      } else {
+        console.log("Ungültiger Token, Cookie wird gelöscht");
+        document.cookie = "remember_token=; Max-Age=0; path=/;";
+      }
+    } catch (error) {
+      console.error("Fehler beim Auto-Login:", error);
+      document.cookie = "remember_token=; Max-Age=0; path=/;";
+    }
   }
+  
 
   // === REGISTRIERUNG ===
   const registerForm = document.getElementById("registerForm");

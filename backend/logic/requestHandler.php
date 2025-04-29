@@ -98,21 +98,34 @@ switch ($input['action']) {
         }
         break;
 
-    case 'getSessionUser':
-        // Automatisches Login via Cookie
-        if (!isset($_SESSION['user_id']) && isset($_COOKIE['remember_token'])) {
-            $pdo = DBAccess::connect();
-            $stmt = $pdo->prepare("SELECT * FROM users WHERE remember_token = :token");
-            $stmt->execute(['token' => $_COOKIE['remember_token']]);
-            $user = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if ($user) {
-                $_SESSION['user_id'] = $user['user_id'];
-                $_SESSION['username'] = $user['username'];
-                $_SESSION['is_admin'] = $user['is_admin'];
-                $_SESSION['active'] = $user['active'];
+        case 'getSessionUser':
+            if (!isset($_SESSION['user_id']) && isset($_COOKIE['remember_token'])) {
+                $pdo = DBAccess::connect();
+                $stmt = $pdo->prepare("SELECT * FROM users WHERE remember_token = :token");
+                $stmt->execute(['token' => $_COOKIE['remember_token']]);
+                $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+                if ($user) {
+                    $_SESSION['user_id'] = $user['user_id'];
+                    $_SESSION['username'] = $user['username'];
+                    $_SESSION['is_admin'] = $user['is_admin'];
+                    $_SESSION['active'] = $user['active'];
+                } else {
+                    setcookie('remember_token', '', time() - 3600, '/');
+                }
             }
-        }
+        
+            if (isset($_SESSION['user_id'])) {
+                echo json_encode([
+                    'username' => $_SESSION['username'],
+                    'is_admin' => $_SESSION['is_admin'],
+                    'active' => $_SESSION['active']
+                ]);
+            } else {
+                echo json_encode(['username' => null]);
+            }
+            break;
+        
 
         // Rückgabe der Session-Info
         if (isset($_SESSION['user_id'])) {
