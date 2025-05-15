@@ -272,14 +272,20 @@ switch ($input['action']) {
 
 
     case 'getUserOrders':
+        header('Content-Type: application/json');
         if (!isset($_SESSION['user_id'])) {
-            echo json_encode(['error' => 'Not logged in']);
+            echo json_encode([
+                'orders' => [],
+                'error'  => 'Nicht eingeloggt'
+            ]);
             break;
         }
-
         $orders = DataHandler::getOrdersByUser($_SESSION['user_id']);
-        echo json_encode($orders);
+        echo json_encode([
+            'orders' => $orders
+        ]);
         break;
+
 
     case 'getOrderDetails':
         if (!isset($input['order_id'])) {
@@ -290,6 +296,29 @@ switch ($input['action']) {
         $details = DataHandler::getOrderDetails($input['order_id']);
         echo json_encode($details);
         break;
+
+    case 'getInvoiceData':
+        header('Content-Type: application/json');
+        // 1) Auth check
+        if (!isset($_SESSION['user_id'])) {
+            echo json_encode(['error' => 'Nicht eingeloggt']);
+            break;
+        }
+        // 2) Parameter prüfen
+        $orderId = $input['order_id'] ?? null;
+        if (!$orderId) {
+            echo json_encode(['error' => 'Fehlende Bestell-ID']);
+            break;
+        }
+        // 3) Daten holen & ausgeben
+        try {
+            $data = DataHandler::getInvoiceData((int)$orderId);
+            echo json_encode($data);
+        } catch (Exception $e) {
+            echo json_encode(['error' => $e->getMessage()]);
+        }
+        break;
+
 
     default:
         echo json_encode(['error' => 'Unknown action']);

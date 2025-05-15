@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Rechnung</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../res/css/style.css" />
+  </head>
+  <body>
+    <div class="container my-5">
+      <h1 class="mb-4">Rechnung</h1>
+
+      <p><strong>Rechnungsnummer:</strong> <span id="invoiceNumber"></span></p>
+      <p><strong>Bestellnummer:</strong> <span id="orderId"></span></p>
+      <p><strong>Datum:</strong> <span id="orderDate"></span></p>
+
+      <h5 class="mt-4">Rechnung an:</h5>
+      <address id="customerAddress"></address>
+
+      <table class="table table-bordered mt-4">
+        <thead>
+          <tr>
+            <th>Titel</th>
+            <th>Autor</th>
+            <th>Einzelpreis</th>
+            <th>Menge</th>
+            <th>Summe</th>
+          </tr>
+        </thead>
+        <tbody id="invoiceItems"></tbody>
+        <tfoot>
+          <tr>
+            <th colspan="4" class="text-end">Summe</th>
+            <th id="invoiceTotal"></th>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../js/invoice.js"></script>
+  </body>
+</html>
