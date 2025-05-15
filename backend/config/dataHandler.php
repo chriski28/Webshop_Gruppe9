@@ -278,14 +278,18 @@ class DataHandler
     {
         $pdo = DBAccess::connect();
         $stmt = $pdo->prepare("
-            SELECT order_id, created_at AS order_date, status
-            FROM orders
-            WHERE user_id = :user_id
-            ORDER BY created_at DESC
-        ");
+        SELECT
+          order_id,
+          DATE_FORMAT(order_date, '%d.%m.%Y %H:%i:%s') AS order_date,
+          total_price
+        FROM orders
+        WHERE user_id = :user_id
+        ORDER BY order_date ASC
+    ");
         $stmt->execute(['user_id' => $userId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
 
 
     public static function getOrderDetails(int $orderId): array
@@ -304,48 +308,107 @@ class DataHandler
     public static function createOrder(int $userId): array
     {
         $pdo = DBAccess::connect();
-        try {
-            $pdo->beginTransaction();
+        $pdo->beginTransaction();
 
-            // 1) get cart_id
-            $stmt = $pdo->prepare("SELECT cart_id FROM carts WHERE user_id = ?");
-            $stmt->execute([$userId]);
-            $cartId = $stmt->fetchColumn();
-            if (!$cartId) {
-                throw new Exception("Kein Warenkorb gefunden");
-            }
+        // 1) get cart_id
+        $stmt = $pdo->prepare("SELECT cart_id FROM carts WHERE user_id = ?");
+        $stmt->execute([$userId]);
+        $cartId = $stmt->fetchColumn();
+        if (!$cartId) {
+            throw new Exception("Kein Warenkorb gefunden");
+        }
 
-            // 2) sum total price
-            $stmt = $pdo->prepare("
+        // 2) sum total price
+        $stmt = $pdo->prepare("
           SELECT SUM(e.price * i.quantity) 
             FROM items i 
             JOIN ebooks e ON i.ebook_id = e.ebook_id 
            WHERE i.cart_id = ?
         ");
-            $stmt->execute([$cartId]);
-            $total = (float)$stmt->fetchColumn();
+        $stmt->execute([$cartId]);
+        $total = (float)$stmt->fetchColumn();
 
-            // 3) insert order
-            $stmt = $pdo->prepare("
+        // 3) insert order
+        $stmt = $pdo->prepare("
           INSERT INTO orders (user_id, order_date, total_price)
           VALUES (?, NOW(), ?)
         ");
-            $stmt->execute([$userId, $total]);
-            $orderId = $pdo->lastInsertId();
+        $stmt->execute([$userId, $total]);
+        $orderId = $pdo->lastInsertId();
 
-            // 4) move items: set order_id, clear cart_id
-            $stmt = $pdo->prepare("
+        // 4) move items: set order_id, clear cart_id
+        $stmt = $pdo->prepare("
           UPDATE items
              SET order_id = ?, cart_id = NULL
            WHERE cart_id = ?
         ");
-            $stmt->execute([$orderId, $cartId]);
+        $stmt->execute([$orderId, $cartId]);
 
-            $pdo->commit();
-            return ['success' => true, 'orderId' => $orderId];
-        } catch (Exception $e) {
-            $pdo->rollBack();
-            return ['error' => $e->getMessage()];
+        $pdo->commit();
+        return ['success' => true, 'orderId' => $orderId];
+    }
+    /**
+     * Liefert alle Daten für eine Rechnung:
+     *  - Bestelldaten (order_date, total_price)
+     *  - Kundendaten (Adresse, PLZ, Ort)
+     *  - alle Positionen (Titel, Autor, Einzelpreis, Menge, Zeilengesamt)
+     *  - eine zufällige Rechnungsnummer
+     */
+    public static function getInvoiceData(int $orderId): array
+    {
+        $pdo = DBAccess::connect();
+        // 1) Bestell- & Kundendaten
+        $stmt = $pdo->prepare("
+      SELECT
+        o.order_id,
+        DATE_FORMAT(o.order_date, '%d.%m.%Y %H:%i:%s') AS order_date,
+        o.total_price,
+        u.salutation, u.first_name, u.last_name,
+        u.address, u.postal_code, u.city
+      FROM orders o
+      JOIN users u ON o.user_id = u.user_id
+      WHERE o.order_id = ?
+    ");
+        $stmt->execute([$orderId]);
+        $meta = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$meta) {
+            throw new Exception('Bestellung nicht gefunden');
         }
+
+        // 2) Positionen aus items (nicht order_items) holen
+        $stmt = $pdo->prepare("
+      SELECT
+        e.title,
+        e.author,
+        e.price,
+        i.quantity,
+        (e.price * i.quantity) AS line_total
+      FROM items i
+      JOIN ebooks e ON i.ebook_id = e.ebook_id
+      WHERE i.order_id = ?
+    ");
+        $stmt->execute([$orderId]);
+        $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // 3) Rechnungsnummer erzeugen
+        $invoiceNumber = strtoupper(substr(md5(uniqid((string)$orderId, true)), 0, 10));
+
+        return [
+            'order'          => [
+                'order_id'    => $meta['order_id'],
+                'order_date'  => $meta['order_date'],
+                'total_price' => $meta['total_price'],
+            ],
+            'user'           => [
+                'salutation'  => $meta['salutation'],
+                'first_name'  => $meta['first_name'],
+                'last_name'   => $meta['last_name'],
+                'address'     => $meta['address'],
+                'postal_code' => $meta['postal_code'],
+                'city'        => $meta['city'],
+            ],
+            'items'          => $items,
+            'invoice_number' => $invoiceNumber
+        ];
     }
 }
