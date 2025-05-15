@@ -206,7 +206,8 @@ class DataHandler
         $stmt->execute([$userId]);
         return (int)$stmt->fetchColumn();
     }
-    public static function updateCartItem(int $userId, int $ebookId, int $qty): void {
+    public static function updateCartItem(int $userId, int $ebookId, int $qty): void
+    {
         $pdo = DBAccess::connect();
         // Warenkorb-ID laden
         $stmt = $pdo->prepare("SELECT cart_id FROM carts WHERE user_id = ?");
@@ -223,8 +224,9 @@ class DataHandler
                 ->execute([$qty, $cartId, $ebookId]);
         }
     }
-    
-    public static function removeCartItem(int $userId, int $ebookId): void {
+
+    public static function removeCartItem(int $userId, int $ebookId): void
+    {
         $pdo = DBAccess::connect();
         $stmt = $pdo->prepare("SELECT cart_id FROM carts WHERE user_id = ?");
         $stmt->execute([$userId]);
@@ -234,19 +236,20 @@ class DataHandler
             ->execute([$cartId, $ebookId]);
     }
 
-    
-    public static function updateUser(User $user, string $currentPassword): bool{
+
+    public static function updateUser(User $user, string $currentPassword): bool
+    {
         $pdo = DBAccess::connect();
-    
+
         // Aktuelles Passwort prüfen
         $stmt = $pdo->prepare("SELECT password FROM users WHERE user_id = ?");
         $stmt->execute([$user->getUserId()]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    
+
         if (!$row || !password_verify($currentPassword, $row['password'])) {
             return false; // Passwort falsch
         }
-    
+
         // Stammdaten aktualisieren (username und password bleiben gleich)
         $stmt = $pdo->prepare("
             UPDATE users 
@@ -259,7 +262,7 @@ class DataHandler
                    email = :email
              WHERE user_id = :user_id
         ");
-    
+
         return $stmt->execute([
             'salutation' => $user->getSalutation(),
             'first_name' => $user->getFirstName(),
@@ -283,9 +286,10 @@ class DataHandler
         $stmt->execute(['user_id' => $userId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
-    
-    
-        public static function getOrderDetails(int $orderId): array{
+
+
+    public static function getOrderDetails(int $orderId): array
+    {
         $pdo = DBAccess::connect();
         $stmt = $pdo->prepare("
             SELECT e.title, e.price, i.quantity, (e.price * i.quantity) AS line_total
@@ -296,8 +300,52 @@ class DataHandler
         $stmt->execute([$orderId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
-    
-    
+
+    public static function createOrder(int $userId): array
+    {
+        $pdo = DBAccess::connect();
+        try {
+            $pdo->beginTransaction();
+
+            // 1) get cart_id
+            $stmt = $pdo->prepare("SELECT cart_id FROM carts WHERE user_id = ?");
+            $stmt->execute([$userId]);
+            $cartId = $stmt->fetchColumn();
+            if (!$cartId) {
+                throw new Exception("Kein Warenkorb gefunden");
+            }
+
+            // 2) sum total price
+            $stmt = $pdo->prepare("
+          SELECT SUM(e.price * i.quantity) 
+            FROM items i 
+            JOIN ebooks e ON i.ebook_id = e.ebook_id 
+           WHERE i.cart_id = ?
+        ");
+            $stmt->execute([$cartId]);
+            $total = (float)$stmt->fetchColumn();
+
+            // 3) insert order
+            $stmt = $pdo->prepare("
+          INSERT INTO orders (user_id, order_date, total_price)
+          VALUES (?, NOW(), ?)
+        ");
+            $stmt->execute([$userId, $total]);
+            $orderId = $pdo->lastInsertId();
+
+            // 4) move items: set order_id, clear cart_id
+            $stmt = $pdo->prepare("
+          UPDATE items
+             SET order_id = ?, cart_id = NULL
+           WHERE cart_id = ?
+        ");
+            $stmt->execute([$orderId, $cartId]);
+
+            $pdo->commit();
+            return ['success' => true, 'orderId' => $orderId];
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            return ['error' => $e->getMessage()];
+        }
+    }
 }
-
-
