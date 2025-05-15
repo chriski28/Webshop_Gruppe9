@@ -26,7 +26,7 @@ switch ($input['action']) {
             echo json_encode(['error' => 'Not logged in']);
         }
         break;
-    
+
 
     case 'createUser':
         if (isset(
@@ -98,34 +98,34 @@ switch ($input['action']) {
         }
         break;
 
-        case 'getSessionUser':
-            if (!isset($_SESSION['user_id']) && isset($_COOKIE['remember_token'])) {
-                $pdo = DBAccess::connect();
-                $stmt = $pdo->prepare("SELECT * FROM users WHERE remember_token = :token");
-                $stmt->execute(['token' => $_COOKIE['remember_token']]);
-                $user = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-                if ($user) {
-                    $_SESSION['user_id'] = $user['user_id'];
-                    $_SESSION['username'] = $user['username'];
-                    $_SESSION['is_admin'] = $user['is_admin'];
-                    $_SESSION['active'] = $user['active'];
-                } else {
-                    setcookie('remember_token', '', time() - 3600, '/');
-                }
-            }
-        
-            if (isset($_SESSION['user_id'])) {
-                echo json_encode([
-                    'username' => $_SESSION['username'],
-                    'is_admin' => $_SESSION['is_admin'],
-                    'active' => $_SESSION['active']
-                ]);
+    case 'getSessionUser':
+        if (!isset($_SESSION['user_id']) && isset($_COOKIE['remember_token'])) {
+            $pdo = DBAccess::connect();
+            $stmt = $pdo->prepare("SELECT * FROM users WHERE remember_token = :token");
+            $stmt->execute(['token' => $_COOKIE['remember_token']]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($user) {
+                $_SESSION['user_id'] = $user['user_id'];
+                $_SESSION['username'] = $user['username'];
+                $_SESSION['is_admin'] = $user['is_admin'];
+                $_SESSION['active'] = $user['active'];
             } else {
-                echo json_encode(['username' => null]);
+                setcookie('remember_token', '', time() - 3600, '/');
             }
-            break;
-        
+        }
+
+        if (isset($_SESSION['user_id'])) {
+            echo json_encode([
+                'username' => $_SESSION['username'],
+                'is_admin' => $_SESSION['is_admin'],
+                'active' => $_SESSION['active']
+            ]);
+        } else {
+            echo json_encode(['username' => null]);
+        }
+        break;
+
 
         // Rückgabe der Session-Info
         if (isset($_SESSION['user_id'])) {
@@ -233,7 +233,7 @@ switch ($input['action']) {
                 echo json_encode(['error' => 'Not logged in']);
                 break;
             }
-        
+
             $user = new User(
                 $_SESSION['user_id'],
                 false, // is_admin bleibt wie es ist
@@ -245,10 +245,10 @@ switch ($input['action']) {
                 $input['city'],
                 $input['email'],
                 '', // username und password ändern wir hier NICHT
-                '', 
+                '',
                 true // active bleibt true
             );
-        
+
             $success = DataHandler::updateUser($user, $input['currentPassword']);
             if ($success) {
                 echo json_encode(['success' => true]);
@@ -259,13 +259,24 @@ switch ($input['action']) {
             echo json_encode(['error' => 'Fehlende Felder']);
         }
         break;
-    
+
+    case 'createOrder':
+        if (!isset($_SESSION['user_id'])) {
+            echo json_encode(['error' => 'Nicht eingeloggt']);
+            break;
+        }
+        $userId = $_SESSION['user_id'];
+        $result = DataHandler::createOrder($userId);
+        echo json_encode($result);
+        break;
+
+
     case 'getUserOrders':
         if (!isset($_SESSION['user_id'])) {
             echo json_encode(['error' => 'Not logged in']);
             break;
         }
-        
+
         $orders = DataHandler::getOrdersByUser($_SESSION['user_id']);
         echo json_encode($orders);
         break;
@@ -275,11 +286,11 @@ switch ($input['action']) {
             echo json_encode(['error' => 'Fehlende Bestell-ID']);
             break;
         }
-        
+
         $details = DataHandler::getOrderDetails($input['order_id']);
         echo json_encode($details);
-        break; 
-        
+        break;
+
     default:
         echo json_encode(['error' => 'Unknown action']);
         break;

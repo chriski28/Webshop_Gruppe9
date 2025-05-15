@@ -37,7 +37,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       document.cookie = "remember_token=; Max-Age=0; path=/;";
     }
   }
-  
 
   // === REGISTRIERUNG ===
   const registerForm = document.getElementById("registerForm");
@@ -433,120 +432,169 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // === MEIN KONTO: Benutzerprofil laden ===
-const updateForm = document.getElementById("updateUserForm");
-if (updateForm) {
-  fetch("../../backend/logic/requestHandler.php", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "getUser" }),
-  })
-    .then((res) => res.json())
-    .then((user) => {
-      if (user.error) {
-        $("#updateMessage").text(user.error);
-        return;
-      }
-      $("#salutation").val(user.salutation);
-      $("#first_name").val(user.first_name);
-      $("#last_name").val(user.last_name);
-      $("#address").val(user.address);
-      $("#postal_code").val(user.postal_code);
-      $("#city").val(user.city);
-      $("#email").val(user.email);
-    })
-    .catch((err) => {
-      $("#updateMessage").text("Fehler beim Laden der Benutzerdaten.");
-    });
-}
+  // enable/disable Bestellen-button based on login & cart count
+  async function refreshOrderButton() {
+    const session = await fetch("../../backend/logic/requestHandler.php", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "getUser" }),
+    }).then((r) => r.json());
 
-// === MEIN KONTO: Benutzerprofil speichern ===
-if (updateForm) {
-  updateForm.addEventListener("submit", function (e) {
+    const count = await fetch("../../backend/logic/requestHandler.php", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "getCartCount" }),
+    }).then((r) => r.json());
+
+    const btn = $("#btnOrder");
+    if (!session.error && session.is_admin === false && count.count > 0) {
+      btn.prop("disabled", false);
+    } else {
+      btn.prop("disabled", true);
+    }
+  }
+
+  // call once on load
+  await refreshOrderButton();
+
+  // submit order
+  $("#orderForm").on("submit", async function (e) {
     e.preventDefault();
+    const res = await fetch("../../backend/logic/requestHandler.php", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "createOrder" }),
+    }).then((r) => r.json());
 
-    const data = {
-      action: "updateUser",
-      salutation: $("#salutation").val(),
-      first_name: $("#first_name").val(),
-      last_name: $("#last_name").val(),
-      address: $("#address").val(),
-      postal_code: $("#postal_code").val(),
-      city: $("#city").val(),
-      email: $("#email").val(),
-      currentPassword: $("#confirm_password").val(),
-    };
-
-    $.ajax({
-      url: "../../backend/logic/requestHandler.php",
-      type: "POST",
-      contentType: "application/json",
-      data: JSON.stringify(data),
-      success: function (response) {
-        const msg = $("#updateMessage");
-        msg.removeClass("text-danger text-success");
-      
-        if (response.success) {
-          msg.text("Daten erfolgreich aktualisiert!")
-             .addClass("text-success");
-        } else {
-          msg.text(response.error || "Fehler beim Aktualisieren.")
-             .addClass("text-danger");
-        }
-      },
-      error: function () {
-        const msg = $("#updateMessage");
-        msg.removeClass("text-danger text-success");
-        msg.text("Fehler beim Aktualisieren.").addClass("text-danger");
-      }
-      
-    });
+    if (res.success) {
+      alert("Deine Bestellung wurde erfolgreich aufgegeben!");
+      window.location.reload();
+    } else {
+      alert("Fehler: " + (res.error || "Bestellung fehlgeschlagen"));
+    }
   });
-}
 
-// === MEIN KONTO: Bestellungen laden ===
-const ordersList = document.getElementById("ordersList");
-if (ordersList) {
-  fetch("../../backend/logic/requestHandler.php", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "getUserOrders" }),
-  })
-    .then((res) => res.json())
-    .then((orders) => {
-      if (orders.error) {
-        ordersList.innerHTML = `<p class="text-danger">${orders.error}</p>`;
-        return;
-      }
+  // === MEIN KONTO: Benutzerprofil laden ===
+  const updateForm = document.getElementById("updateUserForm");
+  if (updateForm) {
+    fetch("../../backend/logic/requestHandler.php", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "getUser" }),
+    })
+      .then((res) => res.json())
+      .then((user) => {
+        if (user.error) {
+          $("#updateMessage").text(user.error);
+          return;
+        }
+        $("#salutation").val(user.salutation);
+        $("#first_name").val(user.first_name);
+        $("#last_name").val(user.last_name);
+        $("#address").val(user.address);
+        $("#postal_code").val(user.postal_code);
+        $("#city").val(user.city);
+        $("#email").val(user.email);
+      })
+      .catch((err) => {
+        $("#updateMessage").text("Fehler beim Laden der Benutzerdaten.");
+      });
+  }
 
-      if (orders.length === 0) {
-        ordersList.innerHTML = `<p>Fehler beim Laden der Bestellungen.</p>`;
-        return;
-      }
+  // === MEIN KONTO: Benutzerprofil speichern ===
+  if (updateForm) {
+    updateForm.addEventListener("submit", function (e) {
+      e.preventDefault();
 
-      orders.sort((a, b) => new Date(a.order_date) - new Date(b.order_date));
+      const data = {
+        action: "updateUser",
+        salutation: $("#salutation").val(),
+        first_name: $("#first_name").val(),
+        last_name: $("#last_name").val(),
+        address: $("#address").val(),
+        postal_code: $("#postal_code").val(),
+        city: $("#city").val(),
+        email: $("#email").val(),
+        currentPassword: $("#confirm_password").val(),
+      };
 
-      orders.forEach((order) => {
-        const orderDiv = document.createElement("div");
-        orderDiv.className = "card mb-3";
+      $.ajax({
+        url: "../../backend/logic/requestHandler.php",
+        type: "POST",
+        contentType: "application/json",
+        data: JSON.stringify(data),
+        success: function (response) {
+          const msg = $("#updateMessage");
+          msg.removeClass("text-danger text-success");
 
-        orderDiv.innerHTML = `
+          if (response.success) {
+            msg
+              .text("Daten erfolgreich aktualisiert!")
+              .addClass("text-success");
+          } else {
+            msg
+              .text(response.error || "Fehler beim Aktualisieren.")
+              .addClass("text-danger");
+          }
+        },
+        error: function () {
+          const msg = $("#updateMessage");
+          msg.removeClass("text-danger text-success");
+          msg.text("Fehler beim Aktualisieren.").addClass("text-danger");
+        },
+      });
+    });
+  }
+
+  // === MEIN KONTO: Bestellungen laden ===
+  const ordersList = document.getElementById("ordersList");
+  if (ordersList) {
+    fetch("../../backend/logic/requestHandler.php", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "getUserOrders" }),
+    })
+      .then((res) => res.json())
+      .then((orders) => {
+        if (orders.error) {
+          ordersList.innerHTML = `<p class="text-danger">${orders.error}</p>`;
+          return;
+        }
+
+        if (orders.length === 0) {
+          ordersList.innerHTML = `<p>Fehler beim Laden der Bestellungen.</p>`;
+          return;
+        }
+
+        orders.sort((a, b) => new Date(a.order_date) - new Date(b.order_date));
+
+        orders.forEach((order) => {
+          const orderDiv = document.createElement("div");
+          orderDiv.className = "card mb-3";
+
+          orderDiv.innerHTML = `
           <div class="card-body">
-            <h5 class="card-title">Bestellung #${order.order_id} vom ${new Date(order.order_date).toLocaleDateString()}</h5>
+            <h5 class="card-title">Bestellung #${order.order_id} vom ${new Date(
+            order.order_date
+          ).toLocaleDateString()}</h5>
             <p class="card-text">Status: ${order.status}</p>
-            <button class="btn btn-primary btn-sm mb-2" onclick="showOrderDetails(${order.order_id})">Details anzeigen</button>
-            <button class="btn btn-success btn-sm" onclick="generateInvoice(${order.order_id})">Rechnung drucken</button>
+            <button class="btn btn-primary btn-sm mb-2" onclick="showOrderDetails(${
+              order.order_id
+            })">Details anzeigen</button>
+            <button class="btn btn-success btn-sm" onclick="generateInvoice(${
+              order.order_id
+            })">Rechnung drucken</button>
             <div id="orderDetails-${order.order_id}" class="mt-3"></div>
           </div>
         `;
 
-        ordersList.appendChild(orderDiv);
+          ordersList.appendChild(orderDiv);
+        });
+      })
+      .catch((err) => {
+        ordersList.innerHTML = `<p class="text-danger">Keine Bestellungen gefunden.</p>`;
       });
-    })
-    .catch((err) => {
-      ordersList.innerHTML = `<p class="text-danger">Keine Bestellungen gefunden.</p>`;
-    });
-}
+  }
 }); // end DOMContentLoaded
 
 // Warenkorb im Navbar aktualisieren
@@ -622,7 +670,9 @@ function showOrderDetails(orderId) {
 
       let html = '<ul class="list-group">';
       details.forEach((item) => {
-        html += `<li class="list-group-item">${item.title} - ${item.quantity}x - ${item.price.toFixed(2)}€</li>`;
+        html += `<li class="list-group-item">${item.title} - ${
+          item.quantity
+        }x - ${item.price.toFixed(2)}€</li>`;
       });
       html += "</ul>";
       container.innerHTML = html;

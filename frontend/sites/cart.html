@@ -37,7 +37,21 @@
         <p>
           <strong>Gesamtsumme:</strong> <span id="total-price">0.00 €</span>
         </p>
-        <a href="checkout.html" class="btn btn-success">Zur Kasse</a>
+        <form id="orderForm" class="d-inline">
+          <button
+            type="submit"
+            id="btnOrder"
+            class="btn btn-primary"
+            disabled
+          >
+            Bestellen
+          </button>
+        </form>
+        
+        <!-- confirmation message -->
+        <div id="orderSuccess" class="alert alert-success mt-3 d-none">
+          Deine Bestellung wurde erfolgreich aufgegeben!
+        </div>        
       </div>
     </main>
 
