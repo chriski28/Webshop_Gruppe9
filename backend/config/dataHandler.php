@@ -26,12 +26,20 @@ class DataHandler
             $row['city'],
             $row['email'],
             $row['username'],
-            $row['password'],
+            $row['password'], 
             (bool) $row['active']
         );
 
         return $user;
     }
+
+    public static function toggleUserActive(int $userId, bool $active): void
+{
+    $pdo = DBAccess::connect();
+    $stmt = $pdo->prepare("UPDATE users SET active = ? WHERE user_id = ?");
+    $stmt->execute([(int)$active, $userId]);
+}
+
     public static function createUser(User $user): bool
     {
         $pdo = DBAccess::connect();
@@ -297,7 +305,7 @@ class DataHandler
         $pdo = DBAccess::connect();
         $stmt = $pdo->prepare("
             SELECT e.title, e.price, i.quantity, (e.price * i.quantity) AS line_total
-              FROM order_items i
+              FROM items i
               JOIN ebooks e ON i.ebook_id = e.ebook_id
              WHERE i.order_id = ?
         ");
@@ -378,6 +386,7 @@ class DataHandler
         // 2) Positionen aus items (nicht order_items) holen
         $stmt = $pdo->prepare("
       SELECT
+        i.ebook_id,
         e.title,
         e.author,
         e.price,
@@ -411,4 +420,28 @@ class DataHandler
             'invoice_number' => $invoiceNumber
         ];
     }
+
+    public static function removeItemFromOrder(int $orderId, int $ebookId): void
+{
+    $pdo = DBAccess::connect();
+
+    // 1) Item löschen
+    $stmt = $pdo->prepare("DELETE FROM items WHERE order_id = ? AND ebook_id = ?");
+    $stmt->execute([$orderId, $ebookId]);
+
+    // 2) Neue Summe berechnen
+    $stmt = $pdo->prepare("
+        SELECT SUM(e.price * i.quantity)
+        FROM items i
+        JOIN ebooks e ON i.ebook_id = e.ebook_id
+        WHERE i.order_id = ?
+    ");
+    $stmt->execute([$orderId]);
+    $newTotal = (float)$stmt->fetchColumn();
+
+    // 3) In orders aktualisieren
+    $stmt = $pdo->prepare("UPDATE orders SET total_price = ? WHERE order_id = ?");
+    $stmt->execute([$newTotal, $orderId]);
+}
+
 }
