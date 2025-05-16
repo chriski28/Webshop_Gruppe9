@@ -76,10 +76,15 @@ switch ($input['action']) {
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if ($user && password_verify($input['password'], $user['password'])) {
+                 if (!$user['active']) {
+                echo json_encode(['success' => false, 'error' => 'Account ist deaktiviert.']);
+                break;
+            }
                 $_SESSION['user_id'] = $user['user_id'];
                 $_SESSION['username'] = $user['username'];
                 $_SESSION['is_admin'] = $user['is_admin'];
                 $_SESSION['active'] = $user['active'];
+
 
                 // === NEU: Cookie setzen, wenn rememberMe aktiv ===
                 $rememberToken = null;
@@ -318,6 +323,38 @@ switch ($input['action']) {
             echo json_encode(['error' => $e->getMessage()]);
         }
         break;
+
+    case 'toggleUserActive':
+    if (!isset($input['user_id'], $input['active'])) {
+        echo json_encode(['error' => 'Fehlende Parameter']);
+        break;
+    }
+    DataHandler::toggleUserActive((int)$input['user_id'], (bool)$input['active']);
+    echo json_encode(['success' => true]);
+    break;
+
+    case 'getOrdersByUserAdmin':
+    if (!isset($input['user_id'])) {
+        echo json_encode(['error' => 'Fehlende User-ID']);
+        break;
+    }
+    $orders = DataHandler::getOrdersByUser((int)$input['user_id']);
+    echo json_encode(['orders' => $orders]);
+    break;
+
+    case 'removeItemFromOrder':
+    if (!isset($input['order_id'], $input['ebook_id'])) {
+        echo json_encode(['success' => false, 'error' => 'Fehlende Parameter']);
+        break;
+    }
+
+    try {
+        DataHandler::removeItemFromOrder((int)$input['order_id'], (int)$input['ebook_id']);
+        echo json_encode(['success' => true]);
+    } catch (Exception $e) {
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+    break;
 
 
     default:
