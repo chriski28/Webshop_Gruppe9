@@ -1,4 +1,75 @@
 document.addEventListener("DOMContentLoaded", async () => {
+  // === MEIN KONTO: Benutzerprofil laden ===
+  const updateForm = document.getElementById("updateUserForm");
+  if (updateForm) {
+    fetch("../../backend/logic/requestHandler.php", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "getUser" }),
+    })
+      .then((res) => res.json())
+      .then((user) => {
+        if (user.error) {
+          $("#updateMessage").text(user.error);
+          return;
+        }
+        $("#salutation").val(user.salutation);
+        $("#first_name").val(user.first_name);
+        $("#last_name").val(user.last_name);
+        $("#address").val(user.address);
+        $("#postal_code").val(user.postal_code);
+        $("#city").val(user.city);
+        $("#email").val(user.email);
+      })
+      .catch((err) => {
+        $("#updateMessage").text("Fehler beim Laden der Benutzerdaten.");
+      });
+  }
+
+  // === MEIN KONTO: Benutzerprofil speichern ===
+  if (updateForm) {
+    updateForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      const data = {
+        action: "updateUser",
+        salutation: $("#salutation").val(),
+        first_name: $("#first_name").val(),
+        last_name: $("#last_name").val(),
+        address: $("#address").val(),
+        postal_code: $("#postal_code").val(),
+        city: $("#city").val(),
+        email: $("#email").val(),
+        currentPassword: $("#confirm_password").val(),
+      };
+
+      $.ajax({
+        url: "../../backend/logic/requestHandler.php",
+        type: "POST",
+        contentType: "application/json",
+        data: JSON.stringify(data),
+        success: function (response) {
+          const msg = $("#updateMessage");
+          msg.removeClass("text-danger text-success");
+
+          if (response.success) {
+            msg
+              .text("Daten erfolgreich aktualisiert!")
+              .addClass("text-success");
+          } else {
+            msg
+              .text(response.error || "Fehler beim Aktualisieren.")
+              .addClass("text-danger");
+          }
+        },
+        error: function () {
+          const msg = $("#updateMessage");
+          msg.removeClass("text-danger text-success");
+          msg.text("Fehler beim Aktualisieren.").addClass("text-danger");
+        },
+      });
+    });
+  }
   // === MEIN KONTO: Bestellungen laden ===
   async function loadOrders() {
     const session = await fetch("../../backend/logic/requestHandler.php", {
@@ -122,7 +193,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       );
     }
   });
-  
+
   loadOrders();
 
   // === Rechnung generieren ===
