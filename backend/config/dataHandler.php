@@ -167,6 +167,100 @@ class DataHandler
 
         return $ebooks;
     }
+
+    public static function addEbook(array $data): array
+{
+    $pdo = DBAccess::connect();
+
+    $stmt = $pdo->prepare("
+        INSERT INTO ebooks (title, author, description, price, isbn, rating, category)
+        VALUES (:title, :author, :description, :price, :isbn, :rating, :category)
+    ");
+
+    $success = $stmt->execute([
+        'title'       => $data['title'],
+        'author'      => $data['author'],
+        'description' => $data['description'],
+        'price'       => $data['price'],
+        'isbn'        => $data['isbn'] ?? '',
+        'rating'      => $data['rating'] ?? 0,
+        'category'    => $data['category']
+    ]);
+
+    if ($success) {
+        return ['success' => true, 'id' => $pdo->lastInsertId()];
+    } else {
+        return ['success' => false, 'error' => 'Fehler beim Speichern des E-Books.'];
+    }
+}
+
+
+public static function updateEbook(array $data): array
+{
+    $pdo = DBAccess::connect();
+
+    $stmt = $pdo->prepare("
+        UPDATE ebooks
+           SET title = :title,
+               author = :author,
+               description = :description,
+               price = :price,
+               isbn = :isbn,
+               rating = :rating,
+               category = :category,
+               cover_image_path = :cover_image_path
+         WHERE ebook_id = :ebook_id
+    ");
+
+    $success = $stmt->execute([
+        'title'            => $data['title'],
+        'author'           => $data['author'],
+        'description'      => $data['description'],
+        'price'            => $data['price'],
+        'isbn'             => $data['isbn'] ?? '',
+        'rating'           => $data['rating'] ?? 0,
+        'category'         => $data['category'],
+        'cover_image_path' => $data['cover_image_path'] ?? '',
+        'ebook_id'         => $data['ebook_id']
+    ]);
+
+    if ($success) {
+        return ['success' => true];
+    } else {
+        return ['success' => false, 'error' => 'Update fehlgeschlagen.'];
+    }
+}
+
+
+public static function getAllEbooksWithDetails(): array
+{
+    $pdo = DBAccess::connect();
+    $stmt = $pdo->query("SELECT * FROM ebooks ORDER BY title ASC");
+    $ebooks = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    return $ebooks ?: [];
+}
+
+public static function deleteEbook(int $ebook_id): array
+{
+    $pdo = DBAccess::connect();
+
+    $stmt = $pdo->prepare("DELETE FROM ebooks WHERE ebook_id = :id");
+    $success = $stmt->execute(['id' => $ebook_id]);
+
+    if ($success) {
+        return ['success' => true];
+    } else {
+        return ['success' => false, 'error' => 'Löschen fehlgeschlagen.'];
+    }
+}
+
+
+
+
+
+
+
+    
     public static function addToCart(int $userId, int $ebookId, int $qty): void
     {
         $pdo = DBAccess::connect();
@@ -184,7 +278,7 @@ class DataHandler
             INSERT INTO items(ebook_id, quantity, cart_id)
             VALUES (?, ?, ?)
             ON DUPLICATE KEY UPDATE quantity = quantity + VALUES(quantity)
-        ");
+        "); //Wenn genau dieser Eintrag schon existiert, dann wird er nur aktualisiert (+ neue menge)
         $stmt->execute([$ebookId, $qty, $cartId]);
     }
 
@@ -197,7 +291,7 @@ class DataHandler
               JOIN carts c ON i.cart_id = c.cart_id
               JOIN ebooks e ON i.ebook_id = e.ebook_id
              WHERE c.user_id = ?
-        ");
+        "); //Holt alle E-Books, die im Warenkorb eines Users liegen.
         $stmt->execute([$userId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }

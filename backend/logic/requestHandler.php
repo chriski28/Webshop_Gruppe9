@@ -205,7 +205,107 @@ switch ($input['action']) {
             echo json_encode(['error' => 'No search term provided']);
         }
         break;
+    //ebook anlegen
+    case 'addEbook':
+    // Nur eingeloggte Admins dürfen neue E-Books anlegen
+    if (!isset($_SESSION['user_id']) || !$_SESSION['is_admin']) {
+        echo json_encode(['success' => false, 'error' => 'Nur Admins dürfen E-Books anlegen.']);
+        break;
+    }
 
+    // Pflichtfelder prüfen
+    $requiredFields = ['title', 'author', 'description', 'price', 'category'];
+    foreach ($requiredFields as $field) {
+        if (empty($input[$field])) {
+            echo json_encode(['success' => false, 'error' => "Feld '$field' fehlt oder ist leer."]);
+            break 2;
+        }
+    }
+
+    // Datenstruktur vorbereiten
+    $data = [
+        'title'       => trim($input['title']),
+        'author'      => trim($input['author']),
+        'description' => trim($input['description']),
+        'price'       => (float) $input['price'],
+        'isbn'        => trim($input['isbn'] ?? ''),
+        'rating'      => isset($input['rating']) ? (float) $input['rating'] : 0,
+        'category'    => trim($input['category']),
+        'cover_image_path' => trim($input['cover_image_path'] ?? '') // optional, falls du später ein Bild-Upload machst
+    ];
+
+    // E-Book speichern
+    $result = DataHandler::addEbook($data);
+    echo json_encode($result);
+    break;
+
+    case 'updateEbook':
+    // Nur Admins dürfen bearbeiten
+    if (!isset($_SESSION['user_id']) || !$_SESSION['is_admin']) {
+        echo json_encode(['success' => false, 'error' => 'Nur Admins dürfen E-Books bearbeiten.']);
+        break;
+    }
+
+    // Pflichtfelder prüfen
+    $requiredFields = ['ebook_id', 'title', 'author', 'description', 'price', 'category'];
+    foreach ($requiredFields as $field) {
+        if (empty($input[$field])) {
+            echo json_encode(['success' => false, 'error' => "Feld '$field' fehlt oder ist leer."]);
+            break 2;
+        }
+    }
+
+    $data = [
+        'ebook_id'    => (int)$input['ebook_id'],
+        'title'       => trim($input['title']),
+        'author'      => trim($input['author']),
+        'description' => trim($input['description']),
+        'price'       => (float)$input['price'],
+        'isbn'        => trim($input['isbn'] ?? ''),
+        'rating'      => isset($input['rating']) ? (float)$input['rating'] : 0,
+        'category'    => trim($input['category']),
+        'cover_image_path' => trim($input['cover_image_path'] ?? '')
+    ];
+
+    $success = DataHandler::updateEbook($data);
+    echo json_encode(['success' => $success]);
+    break;
+
+
+    // für Produktverwaltung (alle Details)
+    case 'getAllEbooksWithDetails':
+        // Nur Admins dürfen alle Details sehen
+        if (!isset($_SESSION['user_id']) || !$_SESSION['is_admin']) {
+            echo json_encode(['error' => 'Nur Admins dürfen alle Produkte sehen.']);
+            break;
+        }
+
+        $ebooks = DataHandler::getAllEbooksWithDetails();
+        echo json_encode($ebooks);
+        break;
+
+
+  case 'deleteEbook':
+    // Nur Admins dürfen löschen
+    if (!isset($_SESSION['user_id']) || !$_SESSION['is_admin']) {
+        echo json_encode(['success' => false, 'error' => 'Nur Admins dürfen löschen.']);
+        break;
+    }
+
+    if (!isset($input['ebook_id'])) {
+        echo json_encode(['success' => false, 'error' => 'Keine ID übergeben.']);
+        break;
+    }
+
+    $ebook_id = (int)$input['ebook_id'];
+    $result = DataHandler::deleteEbook($ebook_id);
+    echo json_encode($result);
+    break;
+
+
+    
+
+        
     //shopping cart
     case 'addToCart':
         DataHandler::addToCart($_SESSION['user_id'], $input['ebook_id'], $input['quantity']);
