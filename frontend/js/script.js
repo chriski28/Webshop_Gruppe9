@@ -38,6 +38,93 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
+  // Hier Code platzieren der automatisch auf JEDER Seite ausgeführt werden soll (zb. Header/Footer laden, Warenkorb aktualisieren, Login/Admin-Check)
+
+  // === Header laden ===
+  fetch("../components/header.html")
+    .then((res) => res.text())
+    .then((data) => {
+      const wrapper = document.createElement("div");
+      wrapper.innerHTML = data;
+      document.body.insertBefore(wrapper, document.body.firstChild);
+      renderMenu();
+    });
+
+  // === DYNAMISCHE NAVIGATION ===
+  function renderMenu() {
+    fetch("../../backend/logic/requestHandler.php", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "getSessionUser" }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        const nav = document.getElementById("user-nav");
+        if (!nav) return;
+
+        if (!data.username) {
+          // Gast
+          nav.innerHTML = `
+          <li class="nav-item"><a class="nav-link" href="index.html">Start</a></li>
+          <li class="nav-item"><a class="nav-link" href="login.html">Login</a></li>
+          <li class="nav-item"><a class="nav-link" href="register.html">Registrieren</a></li>
+          <li class="nav-item"><a class="nav-link" href="shop.html">Produkte</a></li>
+          <li class="nav-item"><a class="nav-link" href="cart.html">Warenkorb</a></li>
+        `;
+        } else if (data.is_admin) {
+          // Admin
+          nav.innerHTML = `
+          <li class="nav-item"><a class="nav-link" href="index.html">Start</a></li>
+          <li class="nav-item"><a class="nav-link" href="editProducts.html">Produkte bearbeiten</a></li>
+          <li class="nav-item"><a class="nav-link" href="editCustomer.html">Kunden bearbeiten</a></li>
+          <li class="nav-item"><span class="nav-link disabled">👑${data.username}</span></li>
+          <li class="nav-item"><a class="nav-link" href="#" id="logout-link">Logout</a></li>
+        `;
+        } else {
+          // Normaler User
+          nav.innerHTML = `
+          <li class="nav-item"><a class="nav-link" href="index.html">Start</a></li>
+          <li class="nav-item"><a class="nav-link" href="shop.html">Produkte</a></li>
+          <li class="nav-item"><a class="nav-link" href="cart.html">Warenkorb</a></li>
+          <li class="nav-item"><a class="nav-link" href="myAcc.html">Mein Konto</a></li>
+          <li class="nav-item"><span class="nav-link disabled">👋${data.username}</span></li>
+          <li class="nav-item"><a class="nav-link" href="#" id="logout-link">Logout</a></li>
+        `;
+        }
+
+        const logoutBtn = document.getElementById("logout-link");
+        if (logoutBtn) {
+          logoutBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            fetch("../../backend/logic/requestHandler.php", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "logout" }),
+            }).then(() => {
+              document.cookie = "remember_token=; Max-Age=0; path=/;";
+              localStorage.removeItem("cart");
+              window.location.href = "index.html";
+            });
+          });
+        }
+
+        updateCartBadge();
+      })
+      .catch((err) => console.error("Fehler bei dynamischer Navigation:", err));
+  }
+  // === Footer laden ===
+  fetch("../components/footer.html")
+    .then((res) => res.text())
+    .then((data) => {
+      const wrapper = document.createElement("div");
+      wrapper.innerHTML = data;
+      const footer = wrapper.querySelector("footer");
+      if (footer) footer.classList.add("mt-auto");
+      document.body.appendChild(wrapper);
+    });
+
+  // Ende von Code der auf JEDER Seite ausgeführt werden soll
+
   // === REGISTRIERUNG ===
   const registerForm = document.getElementById("registerForm");
   if (registerForm) {
@@ -157,89 +244,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // === Header laden ===
-  fetch("../components/header.html")
-    .then((res) => res.text())
-    .then((data) => {
-      const wrapper = document.createElement("div");
-      wrapper.innerHTML = data;
-      document.body.insertBefore(wrapper, document.body.firstChild);
-      renderMenu();
-    });
-
-  // === DYNAMISCHE NAVIGATION ===
-  function renderMenu() {
-    fetch("../../backend/logic/requestHandler.php", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "getSessionUser" }),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        const nav = document.getElementById("user-nav");
-        if (!nav) return;
-
-        if (!data.username) {
-          // Gast
-          nav.innerHTML = `
-          <li class="nav-item"><a class="nav-link" href="index.html">Start</a></li>
-          <li class="nav-item"><a class="nav-link" href="login.html">Login</a></li>
-          <li class="nav-item"><a class="nav-link" href="register.html">Registrieren</a></li>
-          <li class="nav-item"><a class="nav-link" href="shop.html">Produkte</a></li>
-          <li class="nav-item"><a class="nav-link" href="cart.html">Warenkorb</a></li>
-        `;
-        } else if (data.is_admin) {
-          // Admin
-          nav.innerHTML = `
-          <li class="nav-item"><a class="nav-link" href="index.html">Start</a></li>
-          <li class="nav-item"><a class="nav-link" href="editProducts.html">Produkte bearbeiten</a></li>
-          <li class="nav-item"><a class="nav-link" href="editCustomer.html">Kunden bearbeiten</a></li>
-          <li class="nav-item"><span class="nav-link disabled">👑${data.username}</span></li>
-          <li class="nav-item"><a class="nav-link" href="#" id="logout-link">Logout</a></li>
-        `;
-        } else {
-          // Normaler User
-          nav.innerHTML = `
-          <li class="nav-item"><a class="nav-link" href="index.html">Start</a></li>
-          <li class="nav-item"><a class="nav-link" href="shop.html">Produkte</a></li>
-          <li class="nav-item"><a class="nav-link" href="cart.html">Warenkorb</a></li>
-          <li class="nav-item"><a class="nav-link" href="myAcc.html">Mein Konto</a></li>
-          <li class="nav-item"><span class="nav-link disabled">👋${data.username}</span></li>
-          <li class="nav-item"><a class="nav-link" href="#" id="logout-link">Logout</a></li>
-        `;
-        }
-
-        const logoutBtn = document.getElementById("logout-link");
-        if (logoutBtn) {
-          logoutBtn.addEventListener("click", (e) => {
-            e.preventDefault();
-            fetch("../../backend/logic/requestHandler.php", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ action: "logout" }),
-            }).then(() => {
-              document.cookie = "remember_token=; Max-Age=0; path=/;";
-              localStorage.removeItem("cart");
-              window.location.href = "index.html";
-            });
-          });
-        }
-
-        updateCartBadge();
-      })
-      .catch((err) => console.error("Fehler bei dynamischer Navigation:", err));
-  }
-  // === Footer laden ===
-  fetch("../components/footer.html")
-    .then((res) => res.text())
-    .then((data) => {
-      const wrapper = document.createElement("div");
-      wrapper.innerHTML = data;
-      const footer = wrapper.querySelector("footer");
-      if (footer) footer.classList.add("mt-auto");
-      document.body.appendChild(wrapper);
-    });
-
   // === ebooks ladden+ Suchen Live ===
   const ebookContainer = document.getElementById("ebook-container");
   const categorySelect = document.getElementById("categorySelect");
@@ -320,382 +324,223 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  
-
-
-
   // === Ebooks verwalten ===
   const addEbookBtn = document.getElementById("btnShowAddEbookForm");
-const addEbookContainer = document.getElementById("addEbookContainer");
-const addEbookForm = document.getElementById("addEbookForm");
-const msgBox = document.getElementById("msgEditEbook");
+  const addEbookContainer = document.getElementById("addEbookContainer");
+  const addEbookForm = document.getElementById("addEbookForm");
+  const msgBox = document.getElementById("msgEditEbook");
 
-// Button zeigt/versteckt das Formular
-if (addEbookBtn && addEbookContainer) {
-  addEbookBtn.addEventListener("click", () => {
-    addEbookContainer.classList.toggle("d-none");
-  });
-}
+  // Button zeigt/versteckt das Formular
+  if (addEbookBtn && addEbookContainer) {
+    addEbookBtn.addEventListener("click", () => {
+      addEbookContainer.classList.toggle("d-none");
+    });
+  }
 
-// Formular absenden
-if (addEbookForm) {
-  addEbookForm.addEventListener("submit", async function (e) {
-    e.preventDefault();
+  // Formular absenden
+  if (addEbookForm) {
+    addEbookForm.addEventListener("submit", async function (e) {
+      e.preventDefault();
 
-    const data = {
-      action: "addEbook",
-      title: $("#title").val().trim(),
-      author: $("#author").val().trim(),
-      description: $("#description").val().trim(),
-      price: parseFloat($("#price").val()),
-      isbn: $("#isbn").val().trim(),
-      rating: parseFloat($("#rating").val()),
-      category: $("#category").val().trim(),
-      cover_image_path: $("#coverImagePath").val().trim(),
-    };
+      const data = {
+        action: "addEbook",
+        title: $("#title").val().trim(),
+        author: $("#author").val().trim(),
+        description: $("#description").val().trim(),
+        price: parseFloat($("#price").val()),
+        isbn: $("#isbn").val().trim(),
+        rating: parseFloat($("#rating").val()),
+        category: $("#category").val().trim(),
+        cover_image_path: $("#coverImagePath").val().trim(),
+      };
 
-    try {
-      const res = await fetch("../../backend/logic/requestHandler.php", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
+      try {
+        const res = await fetch("../../backend/logic/requestHandler.php", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
 
-      const result = await res.json();
+        const result = await res.json();
 
-      if (result.success) {
-        showMsg("E-Book erfolgreich hinzugefügt!", "success");
-        addEbookForm.reset();
-      } else {
-        showMsg(result.error || "Fehler beim Hinzufügen.", "danger");
+        if (result.success) {
+          showMsg("E-Book erfolgreich hinzugefügt!", "success");
+          addEbookForm.reset();
+        } else {
+          showMsg(result.error || "Fehler beim Hinzufügen.", "danger");
+        }
+      } catch (err) {
+        showMsg("Serverfehler – bitte später versuchen.", "danger");
       }
-    } catch (err) {
-      showMsg("Serverfehler – bitte später versuchen.", "danger");
-    }
-  });
-}
+    });
+  }
 
-function loadEbooksAdmin() {
-  fetch("../../backend/logic/requestHandler.php", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "getAllEbooksWithDetails" }),
-  })
-    .then((res) => res.json())
-    .then((data) => renderEbookTable(data))
-    .catch((err) => console.error("Fehler beim Laden der Admin-Tabelle:", err));
-}
+  function loadEbooksAdmin() {
+    fetch("../../backend/logic/requestHandler.php", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "getAllEbooksWithDetails" }),
+    })
+      .then((res) => res.json())
+      .then((data) => renderEbookTable(data))
+      .catch((err) =>
+        console.error("Fehler beim Laden der Admin-Tabelle:", err)
+      );
+  }
 
-function renderEbookTable(ebooks) {
-  const tbody = document.getElementById("ebookTableBody");
-  if (!tbody) return;
+  function renderEbookTable(ebooks) {
+    const tbody = document.getElementById("ebookTableBody");
+    if (!tbody) return;
 
-  tbody.innerHTML = "";
+    tbody.innerHTML = "";
 
-  ebooks.forEach((ebook) => {
-    const tr = document.createElement("tr");
+    ebooks.forEach((ebook) => {
+      const tr = document.createElement("tr");
 
-    tr.innerHTML = `
+      tr.innerHTML = `
       <td>${ebook.title}</td>
       <td>${ebook.author || "-"}</td>
       <td>${parseFloat(ebook.price).toFixed(2)} €</td>
       <td>${ebook.category || "-"}</td>
       <td>
-        <button class="btn btn-sm btn-info btn-edit" data-id="${ebook.ebook_id}">
+        <button class="btn btn-sm btn-info btn-edit" data-id="${
+          ebook.ebook_id
+        }">
           Bearbeiten
         </button>
-        <button class="btn btn-sm btn-danger btn-delete ms-1" data-id="${ebook.ebook_id}">
+        <button class="btn btn-sm btn-danger btn-delete ms-1" data-id="${
+          ebook.ebook_id
+        }">
           Löschen
         </button>
       </td>
     `;
 
-    tbody.appendChild(tr);
-  });
-
-  // === Event für Bearbeiten-Button
-  document.querySelectorAll(".btn-edit").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const id = btn.dataset.id;
-      const ebook = ebooks.find((e) => e.ebook_id == id);
-      if (ebook) openEditForm(ebook);
+      tbody.appendChild(tr);
     });
-  });
 
-  // === Event für Löschen-Button (MUSS hier rein!)
-  document.querySelectorAll(".btn-delete").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const id = parseInt(btn.dataset.id);
-      if (!confirm("Willst du dieses E-Book wirklich löschen?")) return;
+    // === Event für Bearbeiten-Button
+    document.querySelectorAll(".btn-edit").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.dataset.id;
+        const ebook = ebooks.find((e) => e.ebook_id == id);
+        if (ebook) openEditForm(ebook);
+      });
+    });
 
-      fetch("../../backend/logic/requestHandler.php", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "deleteEbook",
-          ebook_id: id
-        }),
-      })
-        .then((res) => res.json())
-        .then((result) => {
-          if (result.success) {
-            showMsg("E-Book wurde gelöscht.", "success");
-            loadEbooksAdmin(); // richtig: Admin-Ansicht neu laden
-          } else {
-            showMsg(result.error || "Löschen fehlgeschlagen.", "danger");
-          }
+    // === Event für Löschen-Button (MUSS hier rein!)
+    document.querySelectorAll(".btn-delete").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = parseInt(btn.dataset.id);
+        if (!confirm("Willst du dieses E-Book wirklich löschen?")) return;
+
+        fetch("../../backend/logic/requestHandler.php", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "deleteEbook",
+            ebook_id: id,
+          }),
         })
-        .catch((err) => {
-          console.error("Fehler beim Löschen:", err);
-          showMsg("Serverfehler beim Löschen.", "danger");
-        });
+          .then((res) => res.json())
+          .then((result) => {
+            if (result.success) {
+              showMsg("E-Book wurde gelöscht.", "success");
+              loadEbooksAdmin(); // richtig: Admin-Ansicht neu laden
+            } else {
+              showMsg(result.error || "Löschen fehlgeschlagen.", "danger");
+            }
+          })
+          .catch((err) => {
+            console.error("Fehler beim Löschen:", err);
+            showMsg("Serverfehler beim Löschen.", "danger");
+          });
+      });
     });
-  });
-}
-
-
-  
-
-// Wenn Tabelle existiert, Produkte für Admin laden
-if (document.getElementById("ebookTableBody")) {
-  loadEbooksAdmin();
-}
-
-
-//daten bearbeiten
-
-function openEditForm(ebook) {
-  $("#edit_ebook_id").val(ebook.ebook_id);
-  $("#edit_title").val(ebook.title);
-  $("#edit_author").val(ebook.author);
-  $("#edit_description").val(ebook.description);
-  $("#edit_price").val(ebook.price);
-  $("#edit_isbn").val(ebook.isbn);
-  $("#edit_rating").val(ebook.rating);
-  $("#edit_category").val(ebook.category);
-  $("#edit_cover_image_path").val(ebook.cover_image_path);
-
-  const modal = new bootstrap.Modal(document.getElementById("editEbookModal"));
-  modal.show();
-}
-
-
-const editForm = document.getElementById("editEbookForm");
-const editMsg = document.getElementById("msgEditSave");
-
-if (editForm) {
-  document.getElementById("editEbookForm").addEventListener("submit", async function (e) {
-  e.preventDefault();
-
-  const data = {
-    action: "updateEbook",
-    ebook_id: parseInt($("#edit_ebook_id").val()),
-    title: $("#edit_title").val().trim(),
-    author: $("#edit_author").val().trim(),
-    description: $("#edit_description").val().trim(),
-    price: parseFloat($("#edit_price").val()),
-    isbn: $("#edit_isbn").val().trim(),
-    rating: parseFloat($("#edit_rating").val()),
-    category: $("#edit_category").val().trim(),
-    cover_image_path: $("#edit_cover_image_path").val().trim()
-  };
-
-  try {
-    const res = await fetch("../../backend/logic/requestHandler.php", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-
-    const result = await res.json();
-
-    const msg = document.getElementById("msgEditSave");
-    if (result.success) {
-      msg.className = "alert alert-success";
-      msg.textContent = "E-Book erfolgreich aktualisiert.";
-      msg.classList.remove("d-none");
-      setTimeout(() => location.reload(), 1000);
-    } else {
-      msg.className = "alert alert-danger";
-      msg.textContent = result.error || "Fehler beim Speichern.";
-      msg.classList.remove("d-none");
-    }
-  } catch (err) {
-    showMsg("Serverfehler beim Speichern.", "danger");
   }
 
+  // Wenn Tabelle existiert, Produkte für Admin laden
+  if (document.getElementById("ebookTableBody")) {
+    loadEbooksAdmin();
+  }
 
+  //daten bearbeiten
 
-    setTimeout(() => editMsg.classList.add("d-none"), 4000);
-  });
-}
+  function openEditForm(ebook) {
+    $("#edit_ebook_id").val(ebook.ebook_id);
+    $("#edit_title").val(ebook.title);
+    $("#edit_author").val(ebook.author);
+    $("#edit_description").val(ebook.description);
+    $("#edit_price").val(ebook.price);
+    $("#edit_isbn").val(ebook.isbn);
+    $("#edit_rating").val(ebook.rating);
+    $("#edit_category").val(ebook.category);
+    $("#edit_cover_image_path").val(ebook.cover_image_path);
 
+    const modal = new bootstrap.Modal(
+      document.getElementById("editEbookModal")
+    );
+    modal.show();
+  }
 
+  const editForm = document.getElementById("editEbookForm");
+  const editMsg = document.getElementById("msgEditSave");
 
+  if (editForm) {
+    document
+      .getElementById("editEbookForm")
+      .addEventListener("submit", async function (e) {
+        e.preventDefault();
 
+        const data = {
+          action: "updateEbook",
+          ebook_id: parseInt($("#edit_ebook_id").val()),
+          title: $("#edit_title").val().trim(),
+          author: $("#edit_author").val().trim(),
+          description: $("#edit_description").val().trim(),
+          price: parseFloat($("#edit_price").val()),
+          isbn: $("#edit_isbn").val().trim(),
+          rating: parseFloat($("#edit_rating").val()),
+          category: $("#edit_category").val().trim(),
+          cover_image_path: $("#edit_cover_image_path").val().trim(),
+        };
 
-// Zentrale Message-Funktion für editproduct.html
-function showMsg(text, type = "info") {
-  if (!msgBox) return;
-  msgBox.textContent = text;
-  msgBox.className = `alert alert-${type} text-center m-3`;
-  msgBox.classList.remove("d-none");
-  setTimeout(() => msgBox.classList.add("d-none"), 4000);
-}
-
-  // === CART PAGE RENDERING ===
-  const cartBody = document.getElementById("cart-items");
-  if (cartBody) {
-    let cartItems = [];
-
-    // Prüfen ob eingeloggt und DB-Warenkorb laden
-    fetch("../../backend/logic/requestHandler.php", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "getSessionUser" }),
-    })
-      .then((res) => res.json())
-      .then((userData) => {
-        if (userData.username) {
-          // eingeloggter Nutzer
-          fetch("../../backend/logic/requestHandler.php", {
+        try {
+          const res = await fetch("../../backend/logic/requestHandler.php", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "getCart" }),
-          })
-            .then((res) => res.json())
-            .then((items) => {
-              cartItems = items.map((i) => ({
-                id: i.id,
-                title: i.title,
-                price: i.price,
-                quantity: i.quantity,
-              }));
-              renderCart();
-            });
-        } else {
-          // Gast
-          cartItems = JSON.parse(localStorage.getItem("cart") || "[]");
-          renderCart();
+            body: JSON.stringify(data),
+          });
+
+          const result = await res.json();
+
+          const msg = document.getElementById("msgEditSave");
+          if (result.success) {
+            msg.className = "alert alert-success";
+            msg.textContent = "E-Book erfolgreich aktualisiert.";
+            msg.classList.remove("d-none");
+            setTimeout(() => location.reload(), 1000);
+          } else {
+            msg.className = "alert alert-danger";
+            msg.textContent = result.error || "Fehler beim Speichern.";
+            msg.classList.remove("d-none");
+          }
+        } catch (err) {
+          showMsg("Serverfehler beim Speichern.", "danger");
         }
+
+        setTimeout(() => editMsg.classList.add("d-none"), 4000);
       });
-
-    function renderCart() {
-      cartBody.innerHTML = "";
-      let total = 0;
-      cartItems.forEach((item) => {
-        const price = parseFloat(item.price);
-        const lineTotal = price * item.quantity;
-
-        const row = document.createElement("tr");
-        row.innerHTML = `
-            <td>${item.title}</td>
-            <td>${price.toFixed(2)} €</td>
-            <td>
-              <input type="number"
-                     min="1"
-                     value="${item.quantity}"
-                     class="form-control qty-input"
-                     data-id="${item.id}">
-            </td>
-            <td>${lineTotal.toFixed(2)} €</td>
-            <td>
-              <button class="btn btn-danger btn-sm remove-btn"
-                      data-id="${item.id}">&times;</button>
-            </td>
-          `;
-        cartBody.appendChild(row);
-
-        total += lineTotal;
-      });
-
-      document.getElementById("total-price").textContent =
-        total.toFixed(2) + " €";
-      updateCartBadge();
-    }
-
-    cartBody.addEventListener("change", (e) => {
-      if (e.target.matches(".qty-input")) {
-        const id = parseInt(e.target.dataset.id, 10);
-        const newQty = parseInt(e.target.value, 10) || 1;
-        cartItems = cartItems.map((ci) =>
-          ci.id === id ? { ...ci, quantity: newQty } : ci
-        );
-        localStorage.setItem("cart", JSON.stringify(cartItems));
-        //wenn eingelogt dann DB Update
-        fetch("../../backend/logic/requestHandler.php", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "updateCartItem",
-            ebook_id: id,
-            quantity: newQty,
-          }),
-        });
-        renderCart();
-      }
-    });
-
-    cartBody.addEventListener("click", (e) => {
-      if (e.target.matches(".remove-btn")) {
-        const id = parseInt(e.target.dataset.id, 10);
-        cartItems = cartItems.filter((ci) => ci.id !== id);
-        localStorage.setItem("cart", JSON.stringify(cartItems));
-        //wenn eingelogt dann DB Update
-        fetch("../../backend/logic/requestHandler.php", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "removeCartItem",
-            ebook_id: id,
-          }),
-        });
-        renderCart();
-      }
-    });
   }
 
-  // enable/disable Bestellen-button based on login & cart count
-  async function refreshOrderButton() {
-    const session = await fetch("../../backend/logic/requestHandler.php", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "getUser" }),
-    }).then((r) => r.json());
-
-    const count = await fetch("../../backend/logic/requestHandler.php", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "getCartCount" }),
-    }).then((r) => r.json());
-
-    const btn = $("#btnOrder");
-    if (!session.error && session.is_admin === false && count.count > 0) {
-      btn.prop("disabled", false);
-    } else {
-      btn.prop("disabled", true);
-    }
+  // Zentrale Message-Funktion für editproduct.html
+  function showMsg(text, type = "info") {
+    if (!msgBox) return;
+    msgBox.textContent = text;
+    msgBox.className = `alert alert-${type} text-center m-3`;
+    msgBox.classList.remove("d-none");
+    setTimeout(() => msgBox.classList.add("d-none"), 4000);
   }
-
-  // call once on load
-  await refreshOrderButton();
-
-  // submit order
-  $("#orderForm").on("submit", async function (e) {
-    e.preventDefault();
-    const res = await fetch("../../backend/logic/requestHandler.php", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "createOrder" }),
-    }).then((r) => r.json());
-
-    if (res.success) {
-      alert("Deine Bestellung wurde erfolgreich aufgegeben!");
-      window.location.reload();
-    } else {
-      alert("Fehler: " + (res.error || "Bestellung fehlgeschlagen"));
-    }
-  });
 
   // === MEIN KONTO: Benutzerprofil laden ===
   const updateForm = document.getElementById("updateUserForm");
@@ -768,135 +613,6 @@ function showMsg(text, type = "info") {
       });
     });
   }
-
-  // === MEIN KONTO: Bestellungen laden ===
-  async function loadOrders() {
-    const session = await fetch("../../backend/logic/requestHandler.php", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "getUser" }),
-    }).then((r) => r.json());
-    if (session.error || session.is_admin) return;
-
-    const res = await fetch("../../backend/logic/requestHandler.php", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "getUserOrders" }),
-    }).then((r) => r.json());
-
-    if (res.error) {
-      $("#noOrders").removeClass("d-none").text(res.error);
-      return;
-    }
-
-    const orders = res.orders || [];
-    if (!orders.length) {
-      $("#noOrders").removeClass("d-none");
-      return;
-    }
-
-    $("#noOrders").addClass("d-none");
-    $("#ordersTable").removeClass("d-none");
-
-    const $tbody = $("#ordersTable tbody").empty();
-    orders.forEach((o) => {
-      // summary row
-      $tbody.append(`
-        <tr>
-          <td>${o.order_id}</td>
-          <td>${o.order_date}</td>
-          <td>${parseFloat(o.total_price).toFixed(2)} €</td>
-          <td>
-            <button
-              class="btn btn-info btn-sm me-1"
-              type="button"
-              data-bs-toggle="collapse"
-              data-bs-target="#details-${o.order_id}"
-              aria-expanded="false"
-              aria-controls="details-${o.order_id}"
-            >Details</button>
-            <button
-              class="btn btn-secondary btn-sm btn-print-invoice"
-              data-order-id="${o.order_id}"
-            >Rechnung drucken</button>
-          </td>
-        </tr>
-        <!-- 2) hidden details row -->
-        <tr>
-          <td colspan="4" class="p-0 border-0">
-            <div class="collapse" id="details-${o.order_id}">
-              <div class="card card-body">
-                <table class="table table-sm mb-0">
-                  <thead>
-                    <tr>
-                      <th>Titel</th>
-                      <th>Autor</th>
-                      <th>Preis</th>
-                      <th>Menge</th>
-                      <th>Gesamt</th>
-                    </tr>
-                  </thead>
-                  <tbody id="details-body-${o.order_id}">
-                    <tr><td colspan="5" class="text-center">Lade…</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </td>
-        </tr>
-      `);
-    });
-    // initalise collapse
-    var collapseElList = [].slice.call(document.querySelectorAll(".collapse"));
-    collapseElList.map(function (el) {
-      return new bootstrap.Collapse(el, { toggle: false });
-    });
-  }
-  // === Bestellung: Details ausklappen ===
-  // fetch details on first expand
-  $(document).on("show.bs.collapse", '[id^="details-"]', async function () {
-    const collapseId = this.id; // e.g. "details-42"
-    const orderId = collapseId.split("-")[1];
-    const $body = $(`#details-body-${orderId}`);
-    // if already loaded (we replace the placeholder), skip
-    if ($body.data("loaded")) return;
-
-    try {
-      const res = await fetch("../../backend/logic/requestHandler.php", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "getInvoiceData", order_id: orderId }),
-      }).then((r) => r.json());
-      if (res.error) {
-        $body.html(
-          `<tr><td colspan="5" class="text-danger">${res.error}</td></tr>`
-        );
-      } else {
-        $body.empty();
-        res.items.forEach((item) => {
-          $body.append(`
-          <tr>
-            <td>${item.title}</td>
-            <td>${item.author}</td>
-            <td>${parseFloat(item.price).toFixed(2)} €</td>
-            <td>${item.quantity}</td>
-            <td>${parseFloat(item.line_total).toFixed(2)} €</td>
-          </tr>
-        `);
-        });
-      }
-      $body.data("loaded", true);
-    } catch (err) {
-      $body.html(
-        `<tr><td colspan="5" class="text-danger">Fehler beim Laden</td></tr>`
-      );
-    }
-  });
-  loadOrders();
-
-
-
-
 }); // end DOMContentLoaded
 
 // Warenkorb im Navbar aktualisieren
@@ -954,14 +670,6 @@ function addToCart(item) {
     }),
   });
 }
-
-// === Rechnung generieren ===
-// when a Rechnung‐button is clicked, open invoice.html in a new tab
-$(document).on("click", ".btn-print-invoice", function () {
-  const orderId = $(this).data("order-id");
-  if (!orderId) return;
-  window.open(`invoice.html?order_id=${orderId}`, "_blank");
-});
 
 // === ADMIN: Kunden anzeigen und aktiv/deaktiv schalten ===
 async function loadCustomers() {
@@ -1021,7 +729,7 @@ $(document).on("click", ".view-orders", async function () {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       action: "getOrdersByUserAdmin",
-      user_id: userId
+      user_id: userId,
     }),
   });
 
@@ -1044,7 +752,9 @@ $(document).on("click", ".view-orders", async function () {
                       data-order-id="${order.order_id}">
                 Positionen anzeigen
               </button>
-              <div class="order-details-table mt-3 d-none" id="details-${order.order_id}"></div>
+              <div class="order-details-table mt-3 d-none" id="details-${
+                order.order_id
+              }"></div>
             </div>
           </td>
         </tr>
@@ -1068,7 +778,7 @@ $(document).on("click", ".load-details", async function () {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       action: "getInvoiceData",
-      order_id: orderId
+      order_id: orderId,
     }),
   });
 
@@ -1083,12 +793,16 @@ $(document).on("click", ".load-details", async function () {
     const row = $(this);
     const id = row.find("td:first").text();
     if (parseInt(id) === orderId) {
-      row.find("td:nth-child(3)").text(`${parseFloat(data.order.total_price).toFixed(2)} €`);
+      row
+        .find("td:nth-child(3)")
+        .text(`${parseFloat(data.order.total_price).toFixed(2)} €`);
     }
   });
 
   // Tabelleninhalt mit Positionen anzeigen
-  const rows = data.items.map(item => `
+  const rows = data.items
+    .map(
+      (item) => `
     <tr>
       <td>${item.title}</td>
       <td>${item.author}</td>
@@ -1103,7 +817,9 @@ $(document).on("click", ".load-details", async function () {
         </button>
       </td>
     </tr>
-  `).join("");
+  `
+    )
+    .join("");
 
   container.html(`
     <table class="table table-sm">
@@ -1122,13 +838,14 @@ $(document).on("click", ".load-details", async function () {
   `);
 });
 
-
 // Admin: Produkt aus Bestellung entfernen
 $(document).on("click", ".remove-item", async function () {
   const orderId = $(this).data("order-id");
   const ebookId = $(this).data("ebook-id");
 
-  const confirmed = confirm("Möchtest du dieses Produkt wirklich aus der Bestellung entfernen?");
+  const confirmed = confirm(
+    "Möchtest du dieses Produkt wirklich aus der Bestellung entfernen?"
+  );
   if (!confirmed) return;
 
   const res = await fetch("../../backend/logic/requestHandler.php", {
@@ -1137,7 +854,7 @@ $(document).on("click", ".remove-item", async function () {
     body: JSON.stringify({
       action: "removeItemFromOrder",
       order_id: orderId,
-      ebook_id: ebookId
+      ebook_id: ebookId,
     }),
   });
 
@@ -1150,7 +867,7 @@ $(document).on("click", ".remove-item", async function () {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         action: "getInvoiceData",
-        order_id: orderId
+        order_id: orderId,
       }),
     });
 
@@ -1163,7 +880,7 @@ $(document).on("click", ".remove-item", async function () {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "deleteOrder",
-          order_id: orderId
+          order_id: orderId,
         }),
       });
 
@@ -1194,9 +911,6 @@ $(document).on("click", ".remove-item", async function () {
   }
 });
 
-
-
-
 // Klick-Event zum Umschalten von aktiv/deaktiv
 $(document).on("click", ".toggle-user", async function () {
   const userId = $(this).data("user-id");
@@ -1208,7 +922,7 @@ $(document).on("click", ".toggle-user", async function () {
     body: JSON.stringify({
       action: "toggleUserActive",
       user_id: userId,
-      active: !currentActive
+      active: !currentActive,
     }),
   });
 
