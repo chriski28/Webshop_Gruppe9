@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Produkte verwalten – Bookify</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="../res/css/style.css" />
+</head>
+<body class="d-flex flex-column min-vh-100">
+<div class="container mt-4">
+  <h1>Produktverwaltung</h1>
+
+  <div id="msgEditEbook" class="alert d-none text-center m-3"></div>
+
+  <button id="btnShowAddEbookForm" class="btn btn-primary mb-3">+ Neues E-Book hinzufügen</button>
+
+  <!-- Eingabeformular (initial versteckt) -->
+  <div id="addEbookContainer" class="card p-3 d-none">
+    <h5>Neues E-Book anlegen</h5>
+    <div id="uploadBookMessage" class="alert d-none"></div>
+
+    <form id="addEbookForm">
+      <div class="mb-2"><input type="text" class="form-control" id="title" placeholder="Titel" /></div>
+      <div class="mb-2"><input type="text" class="form-control" id="author" placeholder="Autor" /></div>
+      <div class="mb-2"><input type="number" class="form-control" id="price" placeholder="Preis (€)" step="0.01" /></div>
+      <div class="mb-2"><input type="text" class="form-control" id="isbn" placeholder="ISBN" /></div>
+      <div class="mb-2"><input type="number" class="form-control" id="rating" placeholder="Bewertung (0–5)" step="0.1" /></div>
+      <div class="mb-2"><input type="text" class="form-control" id="coverImagePath" placeholder="Bildpfad (z. B. img/covers/book1.jpg)" /></div>
+      <div class="mb-2"><input type="text" class="form-control" id="category" placeholder="Kategorie (z. B. Thriller, Romane)" /></div>
+      <div class="mb-3"><textarea class="form-control" id="description" placeholder="Beschreibung" rows="3"></textarea></div>
+      <button type="submit" class="btn btn-success">Speichern</button>
+    </form>
+  </div>
+
+<table class="table table-striped" id="ebookTable">
+  <thead>
+    <tr>
+      <th>Titel</th>
+      <th>Autor</th>
+      <th>Preis</th>
+      <th>Kategorie</th>
+      <th>Aktion</th>
+    </tr>
+  </thead>
+<tbody id="ebookTableBody">
+  <tr>
+    <td>Der Schatten</td>
+    <td>Max Mustermann</td>
+    <td>9.99 €</td>
+    <td>Thriller</td>
+    <td>
+      <button class="btn btn-sm btn-warning" data-bs-toggle="collapse" data-bs-target="#editRow1">
+        Bearbeiten
+      </button>
+    </td>
+  </tr>
+  <tr class="collapse" id="editRow1">
+    <td colspan="5">
+      <form class="row g-2" onsubmit="return false;">
+        <div class="col-md-3">
+          <input type="text" class="form-control" value="Der Schatten" />
+        </div>
+        <div class="col-md-3">
+          <input type="text" class="form-control" value="Max Mustermann" />
+        </div>
+        <div class="col-md-2">
+          <input type="number" class="form-control" value="9.99" step="0.01" />
+        </div>
+        <div class="col-md-2">
+          <input type="text" class="form-control" value="Thriller" />
+        </div>
+        <div class="col-md-2">
+          <button class="btn btn-success w-100">💾 Speichern</button>
+        </div>
+      </form>
+    </td>
+  </tr>
+</tbody>
+</table>
+</table>
+
+<!-- Bearbeiten-Modal -->
+<div class="modal fade" id="editEbookModal" tabindex="-1" aria-labelledby="editEbookModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form id="editEbookForm">
+        <div class="modal-header">
+          <h5 class="modal-title" id="editEbookModalLabel">E-Book bearbeiten</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="edit_ebook_id">
+          <div class="mb-2">
+            <label>Titel</label>
+            <input type="text" id="edit_title" class="form-control">
+          </div>
+          <div class="mb-2">
+            <label>Autor</label>
+            <input type="text" id="edit_author" class="form-control">
+          </div>
+          <div class="mb-2">
+            <label>Beschreibung</label>
+            <textarea id="edit_description" class="form-control"></textarea>
+          </div>
+          <div class="mb-2">
+            <label>Preis (€)</label>
+            <input type="number" step="0.01" id="edit_price" class="form-control">
+          </div>
+          <div class="mb-2">
+            <label>ISBN</label>
+            <input type="text" id="edit_isbn" class="form-control">
+          </div>
+          <div class="mb-2">
+            <label>Bewertung (0–5)</label>
+            <input type="number" step="0.1" max="5" id="edit_rating" class="form-control">
+          </div>
+          <div class="mb-2">
+            <label>Kategorie</label>
+            <input type="text" id="edit_category" class="form-control">
+          </div>
+          <div class="mb-2">
+            <label>Bildpfad</label>
+            <input type="text" id="edit_cover_image_path" class="form-control">
+          </div>
+          <div id="msgEditSave" class="alert d-none mt-2"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-success">Änderungen speichern</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Schließen</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+</div>
+
+
+
+
+ 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="../js/script.js"></script>
+</body>
+</html>
