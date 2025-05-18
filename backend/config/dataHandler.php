@@ -1,6 +1,7 @@
 <?php
 require_once 'dbaccess.php';
 require_once '../models/user.class.php';
+require_once '../models/ebook.class.php';
 
 class DataHandler
 {
@@ -26,7 +27,7 @@ class DataHandler
             $row['city'],
             $row['email'],
             $row['username'],
-            $row['password'], 
+            $row['password'],
             (bool) $row['active']
         );
 
@@ -34,11 +35,11 @@ class DataHandler
     }
 
     public static function toggleUserActive(int $userId, bool $active): void
-{
-    $pdo = DBAccess::connect();
-    $stmt = $pdo->prepare("UPDATE users SET active = ? WHERE user_id = ?");
-    $stmt->execute([(int)$active, $userId]);
-}
+    {
+        $pdo = DBAccess::connect();
+        $stmt = $pdo->prepare("UPDATE users SET active = ? WHERE user_id = ?");
+        $stmt->execute([(int)$active, $userId]);
+    }
 
     public static function createUser(User $user): bool
     {
@@ -169,37 +170,37 @@ class DataHandler
     }
 
     public static function addEbook(array $data): array
-{
-    $pdo = DBAccess::connect();
+    {
+        $pdo = DBAccess::connect();
 
-    $stmt = $pdo->prepare("
+        $stmt = $pdo->prepare("
         INSERT INTO ebooks (title, author, description, price, isbn, rating, category)
         VALUES (:title, :author, :description, :price, :isbn, :rating, :category)
     ");
 
-    $success = $stmt->execute([
-        'title'       => $data['title'],
-        'author'      => $data['author'],
-        'description' => $data['description'],
-        'price'       => $data['price'],
-        'isbn'        => $data['isbn'] ?? '',
-        'rating'      => $data['rating'] ?? 0,
-        'category'    => $data['category']
-    ]);
+        $success = $stmt->execute([
+            'title'       => $data['title'],
+            'author'      => $data['author'],
+            'description' => $data['description'],
+            'price'       => $data['price'],
+            'isbn'        => $data['isbn'] ?? '',
+            'rating'      => $data['rating'] ?? 0,
+            'category'    => $data['category']
+        ]);
 
-    if ($success) {
-        return ['success' => true, 'id' => $pdo->lastInsertId()];
-    } else {
-        return ['success' => false, 'error' => 'Fehler beim Speichern des E-Books.'];
+        if ($success) {
+            return ['success' => true, 'id' => $pdo->lastInsertId()];
+        } else {
+            return ['success' => false, 'error' => 'Fehler beim Speichern des E-Books.'];
+        }
     }
-}
 
 
-public static function updateEbook(array $data): array
-{
-    $pdo = DBAccess::connect();
+    public static function updateEbook(array $data): array
+    {
+        $pdo = DBAccess::connect();
 
-    $stmt = $pdo->prepare("
+        $stmt = $pdo->prepare("
         UPDATE ebooks
            SET title = :title,
                author = :author,
@@ -212,55 +213,48 @@ public static function updateEbook(array $data): array
          WHERE ebook_id = :ebook_id
     ");
 
-    $success = $stmt->execute([
-        'title'            => $data['title'],
-        'author'           => $data['author'],
-        'description'      => $data['description'],
-        'price'            => $data['price'],
-        'isbn'             => $data['isbn'] ?? '',
-        'rating'           => $data['rating'] ?? 0,
-        'category'         => $data['category'],
-        'cover_image_path' => $data['cover_image_path'] ?? '',
-        'ebook_id'         => $data['ebook_id']
-    ]);
+        $success = $stmt->execute([
+            'title'            => $data['title'],
+            'author'           => $data['author'],
+            'description'      => $data['description'],
+            'price'            => $data['price'],
+            'isbn'             => $data['isbn'] ?? '',
+            'rating'           => $data['rating'] ?? 0,
+            'category'         => $data['category'],
+            'cover_image_path' => $data['cover_image_path'] ?? '',
+            'ebook_id'         => $data['ebook_id']
+        ]);
 
-    if ($success) {
-        return ['success' => true];
-    } else {
-        return ['success' => false, 'error' => 'Update fehlgeschlagen.'];
+        if ($success) {
+            return ['success' => true];
+        } else {
+            return ['success' => false, 'error' => 'Update fehlgeschlagen.'];
+        }
     }
-}
 
 
-public static function getAllEbooksWithDetails(): array
-{
-    $pdo = DBAccess::connect();
-    $stmt = $pdo->query("SELECT * FROM ebooks ORDER BY title ASC");
-    $ebooks = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    return $ebooks ?: [];
-}
-
-public static function deleteEbook(int $ebook_id): array
-{
-    $pdo = DBAccess::connect();
-
-    $stmt = $pdo->prepare("DELETE FROM ebooks WHERE ebook_id = :id");
-    $success = $stmt->execute(['id' => $ebook_id]);
-
-    if ($success) {
-        return ['success' => true];
-    } else {
-        return ['success' => false, 'error' => 'Löschen fehlgeschlagen.'];
+    public static function getAllEbooksWithDetails(): array
+    {
+        $pdo = DBAccess::connect();
+        $stmt = $pdo->query("SELECT * FROM ebooks ORDER BY title ASC");
+        $ebooks = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $ebooks ?: [];
     }
-}
 
+    public static function deleteEbook(int $ebook_id): array
+    {
+        $pdo = DBAccess::connect();
 
+        $stmt = $pdo->prepare("DELETE FROM ebooks WHERE ebook_id = :id");
+        $success = $stmt->execute(['id' => $ebook_id]);
 
+        if ($success) {
+            return ['success' => true];
+        } else {
+            return ['success' => false, 'error' => 'Löschen fehlgeschlagen.'];
+        }
+    }
 
-
-
-
-    
     public static function addToCart(int $userId, int $ebookId, int $qty): void
     {
         $pdo = DBAccess::connect();
@@ -412,7 +406,7 @@ public static function deleteEbook(int $ebook_id): array
         $pdo = DBAccess::connect();
         $pdo->beginTransaction();
 
-        // 1) get cart_id
+        // get cart_id
         $stmt = $pdo->prepare("SELECT cart_id FROM carts WHERE user_id = ?");
         $stmt->execute([$userId]);
         $cartId = $stmt->fetchColumn();
@@ -420,7 +414,7 @@ public static function deleteEbook(int $ebook_id): array
             throw new Exception("Kein Warenkorb gefunden");
         }
 
-        // 2) sum total price
+        // sum total price
         $stmt = $pdo->prepare("
           SELECT SUM(e.price * i.quantity) 
             FROM items i 
@@ -430,7 +424,7 @@ public static function deleteEbook(int $ebook_id): array
         $stmt->execute([$cartId]);
         $total = (float)$stmt->fetchColumn();
 
-        // 3) insert order
+        // insert order
         $stmt = $pdo->prepare("
           INSERT INTO orders (user_id, order_date, total_price)
           VALUES (?, NOW(), ?)
@@ -438,7 +432,7 @@ public static function deleteEbook(int $ebook_id): array
         $stmt->execute([$userId, $total]);
         $orderId = $pdo->lastInsertId();
 
-        // 4) move items: set order_id, clear cart_id
+        // move items: set order_id, clear cart_id
         $stmt = $pdo->prepare("
           UPDATE items
              SET order_id = ?, cart_id = NULL
@@ -449,17 +443,11 @@ public static function deleteEbook(int $ebook_id): array
         $pdo->commit();
         return ['success' => true, 'orderId' => $orderId];
     }
-    /**
-     * Liefert alle Daten für eine Rechnung:
-     *  - Bestelldaten (order_date, total_price)
-     *  - Kundendaten (Adresse, PLZ, Ort)
-     *  - alle Positionen (Titel, Autor, Einzelpreis, Menge, Zeilengesamt)
-     *  - eine zufällige Rechnungsnummer
-     */
+
     public static function getInvoiceData(int $orderId): array
     {
         $pdo = DBAccess::connect();
-        // 1) Bestell- & Kundendaten
+        // Bestell- & Kundendaten
         $stmt = $pdo->prepare("
       SELECT
         o.order_id,
@@ -477,7 +465,7 @@ public static function deleteEbook(int $ebook_id): array
             throw new Exception('Bestellung nicht gefunden');
         }
 
-        // 2) Positionen aus items (nicht order_items) holen
+        // Positionen aus items (nicht order_items) holen
         $stmt = $pdo->prepare("
       SELECT
         i.ebook_id,
@@ -493,7 +481,7 @@ public static function deleteEbook(int $ebook_id): array
         $stmt->execute([$orderId]);
         $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // 3) Rechnungsnummer erzeugen
+        // zufällige Rechnungsnummer erzeugen
         $invoiceNumber = strtoupper(substr(md5(uniqid((string)$orderId, true)), 0, 10));
 
         return [
@@ -516,26 +504,25 @@ public static function deleteEbook(int $ebook_id): array
     }
 
     public static function removeItemFromOrder(int $orderId, int $ebookId): void
-{
-    $pdo = DBAccess::connect();
+    {
+        $pdo = DBAccess::connect();
 
-    // 1) Item löschen
-    $stmt = $pdo->prepare("DELETE FROM items WHERE order_id = ? AND ebook_id = ?");
-    $stmt->execute([$orderId, $ebookId]);
+        // Item löschen
+        $stmt = $pdo->prepare("DELETE FROM items WHERE order_id = ? AND ebook_id = ?");
+        $stmt->execute([$orderId, $ebookId]);
 
-    // 2) Neue Summe berechnen
-    $stmt = $pdo->prepare("
+        // Neue Summe berechnen
+        $stmt = $pdo->prepare("
         SELECT SUM(e.price * i.quantity)
         FROM items i
         JOIN ebooks e ON i.ebook_id = e.ebook_id
         WHERE i.order_id = ?
     ");
-    $stmt->execute([$orderId]);
-    $newTotal = (float)$stmt->fetchColumn();
+        $stmt->execute([$orderId]);
+        $newTotal = (float)$stmt->fetchColumn();
 
-    // 3) In orders aktualisieren
-    $stmt = $pdo->prepare("UPDATE orders SET total_price = ? WHERE order_id = ?");
-    $stmt->execute([$newTotal, $orderId]);
-}
-
+        // In orders aktualisieren
+        $stmt = $pdo->prepare("UPDATE orders SET total_price = ? WHERE order_id = ?");
+        $stmt->execute([$newTotal, $orderId]);
+    }
 }

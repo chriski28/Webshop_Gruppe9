@@ -2,7 +2,16 @@
 <?php
 header("Content-Type: application/json");
 session_start();
+
+// database connection
 require_once '../config/dataHandler.php';
+
+// services
+require_once 'services/userService.php';
+require_once 'services/productService.php';
+require_once 'services/cartService.php';
+require_once 'services/orderService.php';
+require_once 'services/invoiceService.php';
 
 // Read incoming JSON and decide what action to take based on the 'action' field
 $input = json_decode(file_get_contents("php://input"), true);
@@ -14,448 +23,121 @@ if (!isset($input['action'])) {
 
 switch ($input['action']) {
 
+    // User Service -------------------------------
+
     case 'getUser':
-        if (isset($_SESSION['user_id'])) {
-            $user = DataHandler::getUser($_SESSION['user_id']);
-            if ($user === null) {
-                echo json_encode(['error' => 'User not found']);
-            } else {
-                echo json_encode($user->toArray());
-            }
-        } else {
-            echo json_encode(['error' => 'Not logged in']);
-        }
+        getUser();
         break;
 
-
     case 'createUser':
-        if (isset(
-            $input['salutation'],
-            $input['first_name'],
-            $input['last_name'],
-            $input['address'],
-            $input['postal_code'],
-            $input['city'],
-            $input['email'],
-            $input['username'],
-            $input['password']
-        )) {
-            $user = new User(
-                0, // user_id (auto-increment, set to 0)
-                false, // is_admin default false
-                $input['salutation'],
-                $input['first_name'],
-                $input['last_name'],
-                $input['address'],
-                $input['postal_code'],
-                $input['city'],
-                $input['email'],
-                $input['username'],
-                password_hash($input['password'], PASSWORD_DEFAULT),
-                true // active (default true)
-            );
-
-            $success = DataHandler::createUser($user);
-
-            echo json_encode(['success' => $success]);
-        } else {
-            echo json_encode(['error' => 'Missing user data']);
-        }
+        createUser($input);
         break;
 
     case 'getAllUsers':
-        $users = DataHandler::getAllUsers();
-        echo json_encode($users);
+        getAllUsers();
         break;
 
     case 'login':
-        if (isset($input['username'], $input['password'])) {
-            $pdo = DBAccess::connect();
-            $stmt = $pdo->prepare("SELECT * FROM users WHERE username = :username");
-            $stmt->execute(['username' => $input['username']]);
-            $user = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if ($user && password_verify($input['password'], $user['password'])) {
-                 if (!$user['active']) {
-                echo json_encode(['success' => false, 'error' => 'Account ist deaktiviert.']);
-                break;
-            }
-                $_SESSION['user_id'] = $user['user_id'];
-                $_SESSION['username'] = $user['username'];
-                $_SESSION['is_admin'] = $user['is_admin'];
-                $_SESSION['active'] = $user['active'];
-
-
-                // === NEU: Cookie setzen, wenn rememberMe aktiv ===
-                $rememberToken = null;
-                if (!empty($input['rememberMe'])) {
-                    $rememberToken = bin2hex(random_bytes(32)); // sicheres Token
-                    $stmt = $pdo->prepare("UPDATE users SET remember_token = :token WHERE user_id = :id");
-                    $stmt->execute(['token' => $rememberToken, 'id' => $user['user_id']]);
-                }
-
-                echo json_encode(['success' => true, 'remember_token' => $rememberToken]);
-            } else {
-                echo json_encode(['success' => false, 'error' => 'Benutzername oder Passwort ist falsch!']);
-            }
-        } else {
-            echo json_encode(['success' => false, 'error' => 'Benutzername oder Passwort fehlt.']);
-        }
+        login($input);
         break;
 
     case 'getSessionUser':
-        if (!isset($_SESSION['user_id']) && isset($_COOKIE['remember_token'])) {
-            $pdo = DBAccess::connect();
-            $stmt = $pdo->prepare("SELECT * FROM users WHERE remember_token = :token");
-            $stmt->execute(['token' => $_COOKIE['remember_token']]);
-            $user = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if ($user) {
-                $_SESSION['user_id'] = $user['user_id'];
-                $_SESSION['username'] = $user['username'];
-                $_SESSION['is_admin'] = $user['is_admin'];
-                $_SESSION['active'] = $user['active'];
-            } else {
-                setcookie('remember_token', '', time() - 3600, '/');
-            }
-        }
-
-        if (isset($_SESSION['user_id'])) {
-            echo json_encode([
-                'username' => $_SESSION['username'],
-                'is_admin' => $_SESSION['is_admin'],
-                'active' => $_SESSION['active']
-            ]);
-        } else {
-            echo json_encode(['username' => null]);
-        }
-        break;
-
-
-        // Rückgabe der Session-Info
-        if (isset($_SESSION['user_id'])) {
-            echo json_encode([
-                'username' => $_SESSION['username'],
-                'is_admin' => $_SESSION['is_admin'],
-                'active' => $_SESSION['active']
-            ]);
-        } else {
-            echo json_encode(['username' => null]);
-        }
+        getSessionUser();
         break;
 
     case 'loginWithToken':
-        if (!isset($input['token'])) {
-            echo json_encode(['success' => false, 'error' => 'Kein Token übergeben.']);
-            break;
-        }
-
-        $pdo = DBAccess::connect();
-        $stmt = $pdo->prepare("SELECT * FROM users WHERE remember_token = :token");
-        $stmt->execute(['token' => $input['token']]);
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if ($user) {
-            $_SESSION['user_id'] = $user['user_id'];
-            $_SESSION['username'] = $user['username'];
-            $_SESSION['is_admin'] = $user['is_admin'];
-            $_SESSION['active'] = $user['active'];
-
-            echo json_encode([
-                'success' => true,
-                'username' => $user['username'],
-                'is_admin' => $user['is_admin']
-            ]);
-        } else {
-            echo json_encode(['success' => false, 'error' => 'Ungültiger Token.']);
-        }
+        loginWithToken($input);
         break;
 
     case 'logout':
-        session_unset();
-        session_destroy();
-
-        // Optionale: Cookie aus Datenbank entfernen
-        if (isset($_COOKIE['remember_token'])) {
-            $pdo = DBAccess::connect();
-            $stmt = $pdo->prepare("UPDATE users SET remember_token = NULL WHERE remember_token = :token");
-            $stmt->execute(['token' => $_COOKIE['remember_token']]);
-        }
-
-        // Cookie löschen (wird im Frontend auch gelöscht, zur Sicherheit hier nochmal)
-        setcookie('remember_token', '', time() - 3600, '/');
-
-        echo json_encode(['success' => true]);
-        break;
-    //shop
-    case 'getEbooks':
-        // Kategorie prüfen (wenn vorhanden)
-        $category = $input['category'] ?? null;
-
-        $ebooks = DataHandler::getEbooks($category);
-        echo json_encode($ebooks);
-        break;
-    //search
-    case 'searchEbooks':
-        if (isset($input['search'])) {
-            $searchTerm = $input['search'];
-            $ebooks = DataHandler::searchEbooks($searchTerm);
-            echo json_encode($ebooks);
-        } else {
-            echo json_encode(['error' => 'No search term provided']);
-        }
-        break;
-    //ebook anlegen
-    case 'addEbook':
-    // Nur eingeloggte Admins dürfen neue E-Books anlegen
-    if (!isset($_SESSION['user_id']) || !$_SESSION['is_admin']) {
-        echo json_encode(['success' => false, 'error' => 'Nur Admins dürfen E-Books anlegen.']);
-        break;
-    }
-
-    // Pflichtfelder prüfen
-    $requiredFields = ['title', 'author', 'description', 'price', 'category'];
-    foreach ($requiredFields as $field) {
-        if (empty($input[$field])) {
-            echo json_encode(['success' => false, 'error' => "Feld '$field' fehlt oder ist leer."]);
-            break 2;
-        }
-    }
-
-    // Datenstruktur vorbereiten
-    $data = [
-        'title'       => trim($input['title']),
-        'author'      => trim($input['author']),
-        'description' => trim($input['description']),
-        'price'       => (float) $input['price'],
-        'isbn'        => trim($input['isbn'] ?? ''),
-        'rating'      => isset($input['rating']) ? (float) $input['rating'] : 0,
-        'category'    => trim($input['category']),
-        'cover_image_path' => trim($input['cover_image_path'] ?? '') // optional, falls du später ein Bild-Upload machst
-    ];
-
-    // E-Book speichern
-    $result = DataHandler::addEbook($data);
-    echo json_encode($result);
-    break;
-
-    case 'updateEbook':
-    // Nur Admins dürfen bearbeiten
-    if (!isset($_SESSION['user_id']) || !$_SESSION['is_admin']) {
-        echo json_encode(['success' => false, 'error' => 'Nur Admins dürfen E-Books bearbeiten.']);
-        break;
-    }
-
-    // Pflichtfelder prüfen
-    $requiredFields = ['ebook_id', 'title', 'author', 'description', 'price', 'category'];
-    foreach ($requiredFields as $field) {
-        if (empty($input[$field])) {
-            echo json_encode(['success' => false, 'error' => "Feld '$field' fehlt oder ist leer."]);
-            break 2;
-        }
-    }
-
-    $data = [
-        'ebook_id'    => (int)$input['ebook_id'],
-        'title'       => trim($input['title']),
-        'author'      => trim($input['author']),
-        'description' => trim($input['description']),
-        'price'       => (float)$input['price'],
-        'isbn'        => trim($input['isbn'] ?? ''),
-        'rating'      => isset($input['rating']) ? (float)$input['rating'] : 0,
-        'category'    => trim($input['category']),
-        'cover_image_path' => trim($input['cover_image_path'] ?? '')
-    ];
-
-    $success = DataHandler::updateEbook($data);
-    echo json_encode(['success' => $success]);
-    break;
-
-
-    // für Produktverwaltung (alle Details)
-    case 'getAllEbooksWithDetails':
-        // Nur Admins dürfen alle Details sehen
-        if (!isset($_SESSION['user_id']) || !$_SESSION['is_admin']) {
-            echo json_encode(['error' => 'Nur Admins dürfen alle Produkte sehen.']);
-            break;
-        }
-
-        $ebooks = DataHandler::getAllEbooksWithDetails();
-        echo json_encode($ebooks);
-        break;
-
-
-  case 'deleteEbook':
-    // Nur Admins dürfen löschen
-    if (!isset($_SESSION['user_id']) || !$_SESSION['is_admin']) {
-        echo json_encode(['success' => false, 'error' => 'Nur Admins dürfen löschen.']);
-        break;
-    }
-
-    if (!isset($input['ebook_id'])) {
-        echo json_encode(['success' => false, 'error' => 'Keine ID übergeben.']);
-        break;
-    }
-
-    $ebook_id = (int)$input['ebook_id'];
-    $result = DataHandler::deleteEbook($ebook_id);
-    echo json_encode($result);
-    break;
-
-
-    
-
-        
-    //shopping cart
-    case 'addToCart':
-        DataHandler::addToCart($_SESSION['user_id'], $input['ebook_id'], $input['quantity']);
-        echo json_encode(['success' => true]);
-        break;
-
-    case 'getCart':
-        $items = DataHandler::getCartItems($_SESSION['user_id']);
-        echo json_encode($items);
-        break;
-
-    case 'getCartCount':
-        $count = DataHandler::getCartCount($_SESSION['user_id']);
-        echo json_encode(['count' => $count]);
-        break;
-
-    case 'updateCartItem':
-        DataHandler::updateCartItem($_SESSION['user_id'], $input['ebook_id'], $input['quantity']);
-        echo json_encode(['success' => true]);
-        break;
-
-    case 'removeCartItem':
-        DataHandler::removeCartItem($_SESSION['user_id'], $input['ebook_id']);
-        echo json_encode(['success' => true]);
+        logout();
         break;
 
     case 'updateUser':
-        if (isset($input['salutation'], $input['first_name'], $input['last_name'], $input['address'], $input['postal_code'], $input['city'], $input['email'], $input['currentPassword'])) {
-            if (!isset($_SESSION['user_id'])) {
-                echo json_encode(['error' => 'Not logged in']);
-                break;
-            }
-
-            $user = new User(
-                $_SESSION['user_id'],
-                false, // is_admin bleibt wie es ist
-                $input['salutation'],
-                $input['first_name'],
-                $input['last_name'],
-                $input['address'],
-                $input['postal_code'],
-                $input['city'],
-                $input['email'],
-                '', // username und password ändern wir hier NICHT
-                '',
-                true // active bleibt true
-            );
-
-            $success = DataHandler::updateUser($user, $input['currentPassword']);
-            if ($success) {
-                echo json_encode(['success' => true]);
-            } else {
-                echo json_encode(['error' => 'Falsches Passwort oder Fehler beim Aktualisieren.']);
-            }
-        } else {
-            echo json_encode(['error' => 'Fehlende Felder']);
-        }
-        break;
-
-    case 'createOrder':
-        if (!isset($_SESSION['user_id'])) {
-            echo json_encode(['error' => 'Nicht eingeloggt']);
-            break;
-        }
-        $userId = $_SESSION['user_id'];
-        $result = DataHandler::createOrder($userId);
-        echo json_encode($result);
-        break;
-
-
-    case 'getUserOrders':
-        header('Content-Type: application/json');
-        if (!isset($_SESSION['user_id'])) {
-            echo json_encode([
-                'orders' => [],
-                'error'  => 'Nicht eingeloggt'
-            ]);
-            break;
-        }
-        $orders = DataHandler::getOrdersByUser($_SESSION['user_id']);
-        echo json_encode([
-            'orders' => $orders
-        ]);
-        break;
-
-
-    case 'getOrderDetails':
-        if (!isset($input['order_id'])) {
-            echo json_encode(['error' => 'Fehlende Bestell-ID']);
-            break;
-        }
-
-        $details = DataHandler::getOrderDetails($input['order_id']);
-        echo json_encode($details);
-        break;
-
-    case 'getInvoiceData':
-        header('Content-Type: application/json');
-        // 1) Auth check
-        if (!isset($_SESSION['user_id'])) {
-            echo json_encode(['error' => 'Nicht eingeloggt']);
-            break;
-        }
-        // 2) Parameter prüfen
-        $orderId = $input['order_id'] ?? null;
-        if (!$orderId) {
-            echo json_encode(['error' => 'Fehlende Bestell-ID']);
-            break;
-        }
-        // 3) Daten holen & ausgeben
-        try {
-            $data = DataHandler::getInvoiceData((int)$orderId);
-            echo json_encode($data);
-        } catch (Exception $e) {
-            echo json_encode(['error' => $e->getMessage()]);
-        }
+        updateUser($input);
         break;
 
     case 'toggleUserActive':
-    if (!isset($input['user_id'], $input['active'])) {
-        echo json_encode(['error' => 'Fehlende Parameter']);
+        toggleUserActive($input);
         break;
-    }
-    DataHandler::toggleUserActive((int)$input['user_id'], (bool)$input['active']);
-    echo json_encode(['success' => true]);
-    break;
+
+    // Product Service -------------------------------
+
+    case 'getEbooks':
+        getEbooks($input);
+        break;
+
+    case 'searchEbooks':
+        searchEbooks($input);
+        break;
+
+    case 'addEbook':
+        addEbook($input);
+        break;
+
+    case 'updateEbook':
+        updateEbook($input);
+        break;
+
+    case 'getAllEbooksWithDetails':
+        getAllEbooksWithDetails();
+        break;
+
+    case 'deleteEbook':
+        deleteEbook($input);
+        break;
+
+    // Cart Service -------------------------------
+
+    case 'addToCart':
+        addToCart($input);
+        break;
+
+    case 'getCart':
+        getCart();
+        break;
+
+    case 'getCartCount':
+        getCartCount();
+        break;
+
+    case 'updateCartItem':
+        updateCartItem($input);
+        break;
+
+    case 'removeCartItem':
+        removeCartItem($input);
+        break;
+
+    // Order Service -------------------------------
+
+    case 'createOrder':
+        createOrder();
+        break;
+
+    case 'getUserOrders':
+        getUserOrders();
+        break;
+
+    case 'getOrderDetails':
+        getOrderDetails($input);
+        break;
 
     case 'getOrdersByUserAdmin':
-    if (!isset($input['user_id'])) {
-        echo json_encode(['error' => 'Fehlende User-ID']);
+        getOrdersByUserAdmin($input);
         break;
-    }
-    $orders = DataHandler::getOrdersByUser((int)$input['user_id']);
-    echo json_encode(['orders' => $orders]);
-    break;
 
     case 'removeItemFromOrder':
-    if (!isset($input['order_id'], $input['ebook_id'])) {
-        echo json_encode(['success' => false, 'error' => 'Fehlende Parameter']);
+        removeItemFromOrder($input);
         break;
-    }
 
-    try {
-        DataHandler::removeItemFromOrder((int)$input['order_id'], (int)$input['ebook_id']);
-        echo json_encode(['success' => true]);
-    } catch (Exception $e) {
-        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
-    }
-    break;
+    //Invoice Service -------------------------------
 
+    case 'getInvoiceData':
+        getInvoiceData($input);
+        break;
+
+    // Default case -------------------------------
 
     default:
         echo json_encode(['error' => 'Unknown action']);
