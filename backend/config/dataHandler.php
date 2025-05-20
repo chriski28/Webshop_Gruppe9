@@ -5,6 +5,7 @@ require_once '../models/ebook.class.php';
 
 class DataHandler
 {
+    // User Data Handler -------------------------------
     public static function getUser($id)
     {
         $pdo = DBAccess::connect();
@@ -119,7 +120,50 @@ class DataHandler
         );
     }
 
-    public static function getEbooks(?string $category = null): array
+
+    
+   
+
+    public static function updateUser(User $user, string $currentPassword): bool
+    {
+        $pdo = DBAccess::connect();
+
+        // Aktuelles Passwort prüfen
+        $stmt = $pdo->prepare("SELECT password FROM users WHERE user_id = ?");
+        $stmt->execute([$user->getUserId()]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$row || !password_verify($currentPassword, $row['password'])) {
+            return false; // Passwort falsch
+        }
+
+        // Stammdaten aktualisieren (username und password bleiben gleich)
+        $stmt = $pdo->prepare("
+            UPDATE users 
+               SET salutation = :salutation,
+                   first_name = :first_name,
+                   last_name = :last_name,
+                   address = :address,
+                   postal_code = :postal_code,
+                   city = :city,
+                   email = :email
+             WHERE user_id = :user_id
+        ");
+
+        return $stmt->execute([
+            'salutation' => $user->getSalutation(),
+            'first_name' => $user->getFirstName(),
+            'last_name' => $user->getLastName(),
+            'address' => $user->getAddress(),
+            'postal_code' => $user->getPostalCode(),
+            'city' => $user->getCity(),
+            'email' => $user->getEmail(),
+            'user_id' => $user->getUserId()
+        ]);
+    }
+
+    // Product Data Handler -------------------------------
+        public static function getEbooks(?string $category = null): array
     {
         $pdo = DBAccess::connect();
 
@@ -255,6 +299,9 @@ class DataHandler
         }
     }
 
+
+    // Cart Data Handler -------------------------------
+
     public static function addToCart(int $userId, int $ebookId, int $qty): void
     {
         $pdo = DBAccess::connect();
@@ -302,6 +349,7 @@ class DataHandler
         $stmt->execute([$userId]);
         return (int)$stmt->fetchColumn();
     }
+
     public static function updateCartItem(int $userId, int $ebookId, int $qty): void
     {
         $pdo = DBAccess::connect();
@@ -332,74 +380,7 @@ class DataHandler
             ->execute([$cartId, $ebookId]);
     }
 
-
-    public static function updateUser(User $user, string $currentPassword): bool
-    {
-        $pdo = DBAccess::connect();
-
-        // Aktuelles Passwort prüfen
-        $stmt = $pdo->prepare("SELECT password FROM users WHERE user_id = ?");
-        $stmt->execute([$user->getUserId()]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if (!$row || !password_verify($currentPassword, $row['password'])) {
-            return false; // Passwort falsch
-        }
-
-        // Stammdaten aktualisieren (username und password bleiben gleich)
-        $stmt = $pdo->prepare("
-            UPDATE users 
-               SET salutation = :salutation,
-                   first_name = :first_name,
-                   last_name = :last_name,
-                   address = :address,
-                   postal_code = :postal_code,
-                   city = :city,
-                   email = :email
-             WHERE user_id = :user_id
-        ");
-
-        return $stmt->execute([
-            'salutation' => $user->getSalutation(),
-            'first_name' => $user->getFirstName(),
-            'last_name' => $user->getLastName(),
-            'address' => $user->getAddress(),
-            'postal_code' => $user->getPostalCode(),
-            'city' => $user->getCity(),
-            'email' => $user->getEmail(),
-            'user_id' => $user->getUserId()
-        ]);
-    }
-    public static function getOrdersByUser(int $userId): array
-    {
-        $pdo = DBAccess::connect();
-        $stmt = $pdo->prepare("
-        SELECT
-          order_id,
-          DATE_FORMAT(order_date, '%d.%m.%Y %H:%i:%s') AS order_date,
-          total_price
-        FROM orders
-        WHERE user_id = :user_id
-        ORDER BY order_date ASC
-    ");
-        $stmt->execute(['user_id' => $userId]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-
-
-    public static function getOrderDetails(int $orderId): array
-    {
-        $pdo = DBAccess::connect();
-        $stmt = $pdo->prepare("
-            SELECT e.title, e.price, i.quantity, (e.price * i.quantity) AS line_total
-              FROM items i
-              JOIN ebooks e ON i.ebook_id = e.ebook_id
-             WHERE i.order_id = ?
-        ");
-        $stmt->execute([$orderId]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
+    // Order Data Handler -------------------------------
 
     public static function createOrder(int $userId): array
     {
@@ -444,63 +425,33 @@ class DataHandler
         return ['success' => true, 'orderId' => $orderId];
     }
 
-    public static function getInvoiceData(int $orderId): array
+    public static function getOrdersByUser(int $userId): array
     {
         $pdo = DBAccess::connect();
-        // Bestell- & Kundendaten
         $stmt = $pdo->prepare("
-      SELECT
-        o.order_id,
-        DATE_FORMAT(o.order_date, '%d.%m.%Y %H:%i:%s') AS order_date,
-        o.total_price,
-        u.salutation, u.first_name, u.last_name,
-        u.address, u.postal_code, u.city
-      FROM orders o
-      JOIN users u ON o.user_id = u.user_id
-      WHERE o.order_id = ?
+        SELECT
+          order_id,
+          DATE_FORMAT(order_date, '%d.%m.%Y %H:%i:%s') AS order_date,
+          total_price
+        FROM orders
+        WHERE user_id = :user_id
+        ORDER BY order_date ASC
     ");
-        $stmt->execute([$orderId]);
-        $meta = $stmt->fetch(PDO::FETCH_ASSOC);
-        if (!$meta) {
-            throw new Exception('Bestellung nicht gefunden');
-        }
+        $stmt->execute(['user_id' => $userId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 
-        // Positionen aus items (nicht order_items) holen
+    public static function getOrderDetails(int $orderId): array
+    {
+        $pdo = DBAccess::connect();
         $stmt = $pdo->prepare("
-      SELECT
-        i.ebook_id,
-        e.title,
-        e.author,
-        e.price,
-        i.quantity,
-        (e.price * i.quantity) AS line_total
-      FROM items i
-      JOIN ebooks e ON i.ebook_id = e.ebook_id
-      WHERE i.order_id = ?
-    ");
+            SELECT e.title, e.price, i.quantity, (e.price * i.quantity) AS line_total
+              FROM items i
+              JOIN ebooks e ON i.ebook_id = e.ebook_id
+             WHERE i.order_id = ?
+        ");
         $stmt->execute([$orderId]);
-        $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // zufällige Rechnungsnummer erzeugen
-        $invoiceNumber = strtoupper(substr(md5(uniqid((string)$orderId, true)), 0, 10));
-
-        return [
-            'order'          => [
-                'order_id'    => $meta['order_id'],
-                'order_date'  => $meta['order_date'],
-                'total_price' => $meta['total_price'],
-            ],
-            'user'           => [
-                'salutation'  => $meta['salutation'],
-                'first_name'  => $meta['first_name'],
-                'last_name'   => $meta['last_name'],
-                'address'     => $meta['address'],
-                'postal_code' => $meta['postal_code'],
-                'city'        => $meta['city'],
-            ],
-            'items'          => $items,
-            'invoice_number' => $invoiceNumber
-        ];
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     public static function removeItemFromOrder(int $orderId, int $ebookId): void
@@ -525,4 +476,66 @@ class DataHandler
         $stmt = $pdo->prepare("UPDATE orders SET total_price = ? WHERE order_id = ?");
         $stmt->execute([$newTotal, $orderId]);
     }
+
+    //Invoice Data Handler -------------------------------
+
+        public static function getInvoiceData(int $orderId): array
+    {
+            $pdo = DBAccess::connect();
+            // Bestell- & Kundendaten
+            $stmt = $pdo->prepare("
+        SELECT
+            o.order_id,
+            DATE_FORMAT(o.order_date, '%d.%m.%Y %H:%i:%s') AS order_date,
+            o.total_price,
+            u.salutation, u.first_name, u.last_name,
+            u.address, u.postal_code, u.city
+        FROM orders o
+        JOIN users u ON o.user_id = u.user_id
+        WHERE o.order_id = ?
+        ");
+            $stmt->execute([$orderId]);
+            $meta = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$meta) {
+                throw new Exception('Bestellung nicht gefunden');
+            }
+
+            // Positionen aus items (nicht order_items) holen
+            $stmt = $pdo->prepare("
+        SELECT
+            i.ebook_id,
+            e.title,
+            e.author,
+            e.price,
+            i.quantity,
+            (e.price * i.quantity) AS line_total
+        FROM items i
+        JOIN ebooks e ON i.ebook_id = e.ebook_id
+        WHERE i.order_id = ?
+        ");
+            $stmt->execute([$orderId]);
+            $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // zufällige Rechnungsnummer erzeugen
+            $invoiceNumber = strtoupper(substr(md5(uniqid((string)$orderId, true)), 0, 10));
+
+            return [
+                'order'          => [
+                    'order_id'    => $meta['order_id'],
+                    'order_date'  => $meta['order_date'],
+                    'total_price' => $meta['total_price'],
+                ],
+                'user'           => [
+                    'salutation'  => $meta['salutation'],
+                    'first_name'  => $meta['first_name'],
+                    'last_name'   => $meta['last_name'],
+                    'address'     => $meta['address'],
+                    'postal_code' => $meta['postal_code'],
+                    'city'        => $meta['city'],
+                ],
+                'items'          => $items,
+                'invoice_number' => $invoiceNumber
+            ];
+    }
+
 }
