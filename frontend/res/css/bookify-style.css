@@ -7,7 +7,9 @@
   height: 500px;                        
   width: 100%;                         
   z-index: 1;                            
-  color: #ffffff;                       
+  color: #ffffff;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.7); /* Weicher dunkler Schatten */
+                       
 }
 
 /* Overlay: Dunkler Verlauf über dem Bild */
@@ -17,6 +19,8 @@
   inset: 0;                              /* Füllt den gesamten Header */
   z-index: 0;                            /* Unter dem Text */
   border-radius: inherit;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.1));
+
 }
 
 /* Container im Header bleibt über dem Overlay sichtbar */
